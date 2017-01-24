@@ -1,0 +1,35 @@
+TIME [BJD-2454833]
+
+
+To-do:
+-take mean of FFT, save data points which are 5 times greater than mean
+-fold data using modulus function and (t-t0) over the periods (gotten from FFT) to get better light curve
+-show Saul the 1 day vs 5 day spline fit
+
+
+
+
+
+
+
+Done:
+***look up mapping to replace for loops***
+save glob list as array to sort specific files
+from first line, put temperature and magnitude on plot
+repeat same process with other folder data
+look up Cython for optimization
+consider other optimization methods to get to under 1 second of computing time
+	-fftw instead of np.fft
+	-find out how much time just the FFT part takes
+perform FFTs, two subfigures, top figure data, bottom figure FFT
+	-make some 5 sigma cutoff for data points to be included
+
+
+
+	fig2 = plt.figure()
+	subplot1 = fig2.add_subplot(311)
+	subplot1.plot(binsarray[0:len(binsarray)/14], boxcarfftarray[0:len(boxcarfftarray)/14], 'k')
+	subplot2 = fig2.add_subplot(312)
+	subplot2.plot(binsarray[0:len(binsarray)/14], smoothedarray[0:len(smoothedarray)/14], 'k')
+	subplot3 = fig2.add_subplot(313)
+	subplot3.plot(binsarray[0:len(binsarray)/14], subbedarray[0:len(subbedarray)/14], 'k')
