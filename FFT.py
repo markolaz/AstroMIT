@@ -19,21 +19,23 @@ meansum = []
 #finish = 196010
 #start = 81083 						#KIC 7303287 = 81083
 #finish = 81084
-start = 0
-finish = 1000
+start = 167741
+finish = 167742
 rawdatafiles = glob.glob('/media/marko/Saul/Detrenddata1/*.dat')
 #splinedfiles = glob.glob('/home/marko/Desktop/MIT Research/SplineFit/data/splined/*.txt')
 
 
-def BoxCarSubFFT(filename):
+def FFT(filename):
+	if filename[31:43] == 'KIC008153499': return
+	if filename[31:43] == 'KIC008153500': return
 	#print (filename[31:43])
-	destination = "Efficiency/Raw&SplineFFT/" + filename[31:43]
+	destination = "Efficiency/Raw&SplineFFT/Interesting/" + filename[31:43]
 #	if len(filename) == 69: destination = "Efficiency/" + filename[48:55]
 #	if len(filename) == 70: destination = "Efficiency/" + filename[48:56]
 #	destination = "KIC Output Images/Interesting/" + filename[31:43] + "logpart"
 #	destination = "KIC Output Images/Interesting/" + filename[31:43] + "lin"
 
-
+#
 	rawFile = open(filename, 'r')
 	splFile = open('/home/marko/Desktop/MIT Research/SplineFit/data/splined/'+filename[31:43]+'_detrended.txt', 'r')
 	temptimeraw = []
@@ -77,16 +79,10 @@ def BoxCarSubFFT(filename):
 
 	ti = rawTime[0]
 	tf = rawTime[len(rawTime)-1]
-	tdelta = rawTime[1]-rawTime[0]
-	nbins = (tf-ti)/tdelta 	#(rawTime - time0)/tdelta = indicator of which integer it falls under = which bin it falls under
-	for n in range(0, 20):
-		if pow(2,n) > nbins:
-			nbins = pow(2,n)
-			break
+	tdelta = 1765.45/86400
+	nbins = pow(2,17)
 	fftarrayraw = np.zeros(int(nbins)*8, dtype=float)
 	fftarrayspl = np.zeros(int(nbins)*8, dtype=float)
-
-	#print ti, tf, tdelta, fftarrayraw, len(rawTime)
 
 	for value in range(0, len(rawTime)-1):
 		binint = (rawTime[value] - rawTime[0])/(rawTime[1]-rawTime[0])
@@ -108,12 +104,125 @@ def BoxCarSubFFT(filename):
 		fftarrayabsraw.append(abs(fftarrayoutraw[bin]))
 	for bin in range(0, len(fftarrayoutspl)-1):
 		fftarrayabsspl.append(abs(fftarrayoutspl[bin]))
-#	[(fftarrayabsraw.append(abs(fftarrayoutraw[bin])) for bin in range(len(fftarrayoutraw)))]
-#	mean = np.mean(fftarrayabsraw)
 	fftlenraw = np.linspace(0, len(fftarrayabsraw), len(fftarrayabsraw))
 	fftlenspl = np.linspace(0, len(fftarrayabsspl), len(fftarrayabsspl))
 	freqarrayraw = (fftlenraw-1)/((tdelta)*8*nbins)
 	freqarrayspl = (fftlenspl-1)/((tdelta)*8*nbins)
+
+	medianarray = []
+	normalizedfftspl = []
+	for i in range((len(freqarrayspl)/20000)+1):
+		medianarray.append(np.median(fftarrayabsspl[(20000*i):(20000*(i+1))-1]))
+		normalizedfftspl.extend(fftarrayabsspl[(20000*i):(20000*(i+1))]/medianarray[i])
+
+
+
+
+#---Finding Peak Frequency and Period---#
+	peakfreqbin = np.argmax(fftarrayabsraw)
+	peakfreqbinplus = peakfreqbin+1
+	peakfreqbinminus = peakfreqbin-1
+	peakfreq = freqarrayraw[peakfreqbin] - ((fftarrayabsraw[peakfreqbinminus]-fftarrayabsraw[peakfreqbinplus])*(freqarrayraw[peakfreqbin]-freqarrayraw[peakfreqbinminus]))/(2*(2*fftarrayabsraw[peakfreqbin]-fftarrayabsraw[peakfreqbinminus]-fftarrayabsraw[peakfreqbinplus]))
+#	print freqarrayraw[peakfreqbin], peakfreq
+	period = 1/(peakfreq/2)
+#---Finding Peak Frequency and Period---#
+
+#---Folding the data over the period---#
+	foldarray = [0] * 100
+	exposure = [0] * 100
+	for i in range(0, len(rawTime)):
+#	for i in range(0, 1000):
+		frac = (rawTime[i]%period)/period
+		foldarray[int(frac*100)] += rawFlux[i]
+		exposure[int(frac*100)] += 1
+	foldedcurve = np.divide(foldarray, exposure)
+	foldedcurvebins = np.linspace(0, 1, 100)
+#---Folding the data over the period---#
+
+	filterarray = [i for i in normalizedfftspl[int(3*(tdelta*8*nbins)):int(24*(tdelta*8*nbins))] if i>= 4.5]
+	print filename[31:43], filterarray, len(filterarray)
+
+	for i in range(int(3*(tdelta*8*nbins)), int(24*(tdelta*8*nbins))):
+		if normalizedfftspl[i] > 4.5:
+			print filename[31:43], freqarrayspl[i]
+			fig = plt.figure()
+			fig.set_size_inches(12, 8)
+			sp1 = fig.add_subplot(221)
+			sp1.plot(rawTime, rawFlux, 'k')
+			plt.figtext(0.755/2, 0.865, namestr, fontsize = 'small')
+			plt.figtext(0.755/2, 0.845, radstr[0:len(radstr)-3], fontsize = 'small')
+			plt.figtext(0.755/2, 0.825, tempstr[0:len(tempstr)-7], fontsize = 'small')
+			plt.figtext(0.755/2, 0.805, magstr[0:len(magstr)-3], fontsize = 'small')
+			sp1.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
+			sp1.set_title("Raw Data")
+			#sp1.set_ylim([0.95, 1.05])
+			sp2 = fig.add_subplot(222)
+			sp2.plot(splTime, splFlux, 'k')
+			plt.figtext(0.755+0.045, 0.865, namestr, fontsize = 'small')
+			plt.figtext(0.755+0.045, 0.845, radstr[0:len(radstr)-3], fontsize = 'small')
+			plt.figtext(0.755+0.045, 0.825, tempstr[0:len(tempstr)-7], fontsize = 'small')
+			plt.figtext(0.755+0.045, 0.805, magstr[0:len(magstr)-3], fontsize = 'small')
+			sp2.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
+			sp2.set_title("Filtered Data")
+			sp3 = fig.add_subplot(223)
+#			sp3.plot(freqarrayraw[0:len(freqarrayraw)/2], fftarrayabsraw[0:len(fftarrayabsraw)/2], 'k')
+#			plt.figtext(0.755/2, 0.865-0.865/2, namestr, fontsize = 'small')
+#			plt.figtext(0.755/2, 0.845-0.865/2, radstr[0:len(radstr)-3], fontsize = 'small')
+#			plt.figtext(0.755/2, 0.825-0.865/2, tempstr[0:len(tempstr)-7], fontsize = 'small')
+#			plt.figtext(0.755/2, 0.805-0.865/2, magstr[0:len(magstr)-3], fontsize = 'small')
+#			sp3.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
+			sp3.set_xlim([0, 25])
+#			sp3.set_title("Raw Data FFT")
+
+			sp3.plot(freqarrayspl[0:len(freqarrayspl)/2], normalizedfftspl[0:len(normalizedfftspl)/2], 'k')
+			plt.figtext(0.755/2, 0.865-0.865/2, namestr, fontsize = 'large')
+
+
+
+
+
+
+			sp4 = fig.add_subplot(224)
+#			sp4.plot(freqarrayspl[0:len(freqarrayspl)/2], fftarrayabsspl[0:len(fftarrayabsspl)/2], 'k')
+#			sp4.plot(freqarrayraw[0:len(freqarrayraw)/2], normalizedfftraw[0:len(normalizedfftraw)/2], 'k')
+#			sp4.set_xlim([0, 25])
+
+			sp4.step(foldedcurvebins, foldedcurve, 'k')
+			plt.figtext(0.755+0.045, 0.865-0.865/2, namestr, fontsize = 'large')
+			sp4.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
+
+
+
+
+
+
+
+
+
+
+#			sp4.plot(freqarrayspl[0:len(freqarrayspl)/2], convolvedfftspl[0:len(convolvedfftspl)/2], 'k')
+#			plt.figtext(0.755+0.045, 0.865-0.865/2, namestr, fontsize = 'small')
+#			plt.figtext(0.755+0.045, 0.845-0.865/2, radstr[0:len(radstr)-3], fontsize = 'small')
+#			plt.figtext(0.755+0.045, 0.825-0.865/2, tempstr[0:len(tempstr)-7], fontsize = 'small')
+#			plt.figtext(0.755+0.045, 0.805-0.865/2, magstr[0:len(magstr)-3], fontsize = 'small')
+#			sp4.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
+#			sp4.set_xlim([0, 25])
+#			sp4.set_title("Filtered Data FFT")
+			plt.savefig(destination)
+			plt.show()
+			plt.close()
+			break
+#	sp2.set_yscale('log')
+#	sp2.set_ylim([0.3, 100])		#for log part, no limits for log full
+#	sp2.set_ylim([0, 30])			# for linear
+
+	del rawFile, splFile, temptimeraw, temptimespl, tempfluxraw, tempfluxspl, rawTime, splTime, rawFlux, splFlux, parts#, fig
+	return
+
+num_cores = multiprocessing.cpu_count()
+results = Parallel(n_jobs=num_cores)(delayed(FFT)(filename) for filename in rawdatafiles[start:finish])
+
+print "Time for program to run = ", datetime.now() - startTime
 
 
 
@@ -123,54 +232,18 @@ def BoxCarSubFFT(filename):
 #	np.savetxt(output, data, fmt=['%.6f','%.6f'])
 
 
+#	nbins = (tf-ti)/tdelta 	#(rawTime - time0)/tdelta = indicator of which integer it falls under = which bin it falls under
+#	for n in range(0, 20):
+#		if pow(2,n) > nbins:
+#			nbins = pow(2,n)
+#			break
 
-	fig = plt.figure()
-	fig.set_size_inches(12, 8)
-	sp1 = fig.add_subplot(221)
-	sp1.plot(rawTime, rawFlux, 'k')
-	plt.figtext(0.755/2, 0.865, namestr, fontsize = 'small')
-	plt.figtext(0.755/2, 0.845, radstr[0:len(radstr)-3], fontsize = 'small')
-	plt.figtext(0.755/2, 0.825, tempstr[0:len(tempstr)-7], fontsize = 'small')
-	plt.figtext(0.755/2, 0.805, magstr[0:len(magstr)-3], fontsize = 'small')
-	sp1.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
-	sp1.set_title("Raw Data")
-	#sp1.set_ylim([0.95, 1.05])
-	sp2 = fig.add_subplot(222)
-	sp2.plot(splTime, splFlux, 'k')
-	plt.figtext(0.755+0.045, 0.865, namestr, fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.845, radstr[0:len(radstr)-3], fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.825, tempstr[0:len(tempstr)-7], fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.805, magstr[0:len(magstr)-3], fontsize = 'small')
-	sp2.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
-	sp2.set_title("Filtered Data")
-	sp3 = fig.add_subplot(223)
-	sp3.plot(freqarrayraw[0:len(freqarrayraw)/2], fftarrayabsraw[0:len(fftarrayabsraw)/2], 'k')
-	plt.figtext(0.755/2, 0.865-0.865/2, namestr, fontsize = 'small')
-	plt.figtext(0.755/2, 0.845-0.865/2, radstr[0:len(radstr)-3], fontsize = 'small')
-	plt.figtext(0.755/2, 0.825-0.865/2, tempstr[0:len(tempstr)-7], fontsize = 'small')
-	plt.figtext(0.755/2, 0.805-0.865/2, magstr[0:len(magstr)-3], fontsize = 'small')
-	sp3.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
-	sp3.set_xlim([0, 25])
-	sp3.set_title("Raw Data FFT")
-	sp4 = fig.add_subplot(224)
-	sp4.plot(freqarrayspl[0:len(freqarrayspl)/2], fftarrayabsspl[0:len(fftarrayabsspl)/2], 'k')
-	plt.figtext(0.755+0.045, 0.865-0.865/2, namestr, fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.845-0.865/2, radstr[0:len(radstr)-3], fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.825-0.865/2, tempstr[0:len(tempstr)-7], fontsize = 'small')
-	plt.figtext(0.755+0.045, 0.805-0.865/2, magstr[0:len(magstr)-3], fontsize = 'small')
-	sp4.get_yaxis().get_major_formatter().set_useOffset(False) #eliminates exponential representation of values (1.06, not 9.990^-1 + 0.061)
-	sp4.set_xlim([0, 25])
-	sp4.set_title("Filtered Data FFT")
-	plt.savefig(destination)
-	plt.close()
-#	sp2.set_yscale('log')
-#	sp2.set_ylim([0.3, 100])		#for log part, no limits for log full
-#	sp2.set_ylim([0, 30])			# for linear
 
-	del rawFile, splFile, temptimeraw, temptimespl, tempfluxraw, tempfluxspl, rawTime, splTime, rawFlux, splFlux, parts#, fig
-	return
+#	mean = np.mean(fftarrayabsspl[int(3*(tdelta*8*nbins)):len(fftarrayabsspl)/2]) #get the mean of the FFT from 3 cycles to the end
+	
+#	kernel = [1] * 1000
+#	tempconvolvedfftspl = np.convolve(fftarrayabsspl[0:len(fftarrayabsspl)], kernel)
+#	convolvedfftspl = tempconvolvedfftspl[:-999]/1000
 
-num_cores = multiprocessing.cpu_count()
-results = Parallel(n_jobs=num_cores)(delayed(BoxCarSubFFT)(filename) for filename in rawdatafiles[start:finish])
 
-print "rawTime for program to run = ", datetime.now() - startTime
+

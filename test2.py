@@ -26,7 +26,7 @@ finish = 81084
 allfiles = glob.glob('/media/marko/Saul/Detrenddata1/*.dat')
 
 for filename in allfiles:				#specific star finder
-	if filename == '/media/marko/Saul/Detrenddata1/KIC011250867.dat':
+	if filename == '/media/marko/Saul/Detrenddata1/KIC010905804.dat':
 		print counter
 	counter+=1
 

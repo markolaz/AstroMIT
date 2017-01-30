@@ -13,7 +13,11 @@ from datetime import datetime
 startTime = datetime.now()
 
 def remove_sv(desig,spline_width):
-
+    print '-----------------------'+desig+'-----------------------'
+    if desig == 'KIC008153499': return
+    if desig == 'KIC008153500': return
+    if desig == 'KIC008153533': return
+    if desig == 'KIC008153547': return
     '''
     file = 'data/'+desig+'_raw.txt'
     newdata = pd.read_table(file, sep='\s+', header = 0, names=["Time", "Flux", "unc","quarter"])
@@ -52,8 +56,8 @@ def remove_sv(desig,spline_width):
 
 #print np.unique(Quarter)
 
-#    text_file = open("data/splined/"+desig+"_detrended.txt", "w")
-    text_file = open("data/"+desig+"_detrended_5days.txt", "w")
+    text_file = open("data/splined/"+desig+"_detrended.txt", "w")
+#    text_file = open("data/"+desig+"_detrended_5days.txt", "w")
     for i in range(np.max(Quarter)):
         #print 'quarter', i+1
         time = time_all[Quarter == i]
@@ -175,16 +179,18 @@ def bin(time, flux, nbins,p):
 rawdatafiles = glob.glob('/media/marko/Saul/Detrenddata1/*.dat')
 
 
-start = 175506      
-finish = 175507    #if starting at 0, make finish the exact number you want, not n-1
+start = 100500      
+finish = 101000   #if starting at 0, make finish the exact number you want, not n-1
 
 
-splinewidth = 5.0
+splinewidth = 5.0        #default 1.5
 
 
-num_cores = multiprocessing.cpu_count()
-results = Parallel(n_jobs=num_cores)(delayed(remove_sv)(filename[31:43], splinewidth) for filename in rawdatafiles[start:finish])
-
+#num_cores = multiprocessing.cpu_count()
+results = Parallel(n_jobs=-1)(delayed(remove_sv)(filename[31:43], splinewidth) for filename in rawdatafiles[start:finish])
+#for filename in rawdatafiles[start:finish]:
+#    if filename[31:43] == 'KIC008153499': continue
+#    results = Parallel(n_jobs=-1)(delayed(remove_sv)(filename[31:43], splinewidth))
 print 'Time to run = ', datetime.now() - startTime
 
 #remove_sv('72.01',sap =0, llc = 1)#note sap ==1 use sap flux, sap ==0 use PDC flux; if llc ==0 use short cadence; if slc ==1 use long cadence
