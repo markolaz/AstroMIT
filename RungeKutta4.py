@@ -2,22 +2,32 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import math
 
-#x'' = -kx - bx'
+#x'' = -GMx/sqrt(x^2+y^2)^3
+#y'' = -GMy/sqrt(x^2+y^2)^3
 #
-#x' = u             1st eq, f(t, x)
-#u' = -kx - bu      2nd eq, g(t, x)
+#x' = u                     1st eq, f(t, x, y)
+#u' = -GMx/(x^2+y^2)^3      2nd eq, g(t, x, y)
+#
+#y' = v
+#v' = -GMy/(x^2+y^2)^3
 
 
-m = 5.0
+#m = 5.0
 t = 1.0
 x = 1.0
 y = 0.0
 u = 0.0
-v = 1.0
-k = 0.5/m
-b = 0.2/m
+v = 1.3
+#k = 0.5/m
+#b = 0.2/m
+G = math.pow(6.67, -8)
+M = math.pow(1.99, 33)
+
+omega = math.sqrt(G*M/(x**2+y**2))
 
 dt = 0.1
+
+#real units of time are acquired by using T * P / 2pi, where T is t in loop and P is period of 1 radian in orbit
 
 tvector = []
 xvector = []
@@ -29,28 +39,28 @@ yvector.append(y)
 while (t < 200.0):
 
     ix_0 = dt*(u)                                                         #dt*f(t, x, u)
-    jx_0 = dt*(-k*x - b*u)                                                #dt*g(t, x, u)
+    jx_0 = dt*(-x/(math.sqrt(x**2+y**2))**3)                            #dt*g(t, x, u)
 
     iy_0 = dt*(v)                                                         #dt*f(t, x, u)
-    jy_0 = dt*(-k*y - b*v)                                                #dt*g(t, x, u)
+    jy_0 = dt*(-y/(math.sqrt(x**2+y**2))**3)                                                #dt*g(t, x, u)
     
     ix_1 = dt*(u + jx_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
-    jx_1 = dt*(-k*(x + ix_0/2.) - b*(u + jx_0/2.))                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
+    jx_1 = dt*(-(x + ix_0/2.)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
 
     iy_1 = dt*(v + jy_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
-    jy_1 = dt*(-k*(y + iy_0/2.) - b*(v + jy_0/2.))                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
+    jy_1 = dt*(-(y + iy_0/2.)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
     
     ix_2 = dt*(u + jx_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
-    jx_2 = dt*(-k*(x + ix_1/2.) - b*(u + jx_1/2.))                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
+    jx_2 = dt*(-(x + ix_1/2.)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
 
     iy_2 = dt*(v + jy_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
-    jy_2 = dt*(-k*(y + iy_1/2.) - b*(v + jy_1/2.))                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
+    jy_2 = dt*(-(y + iy_1/2.)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
     
     ix_3 = dt*(u + jx_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
-    jx_3 = dt*(-k*(x + ix_2) - b*(u + jx_2))                              #dt*g(t + dt, x + ix_2, u + jx_2)
+    jx_3 = dt*(-(x + ix_2)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
 
     iy_3 = dt*(v + jy_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
-    jy_3 = dt*(-k*(y + iy_2) - b*(v + jy_2))                              #dt*g(t + dt, x + ix_2, u + jx_2)
+    jy_3 = dt*(-(y + iy_2)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
 
     t = t + dt
 
@@ -65,6 +75,7 @@ while (t < 200.0):
     xvector.append(x)
     yvector.append(y)
 
+plt.axis('equal')
 plt.plot(xvector, yvector, 'k')
 plt.show()
 #fig = plt.figure()
