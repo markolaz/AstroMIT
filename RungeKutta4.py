@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import math
+import numpy as np
 
 #x'' = -GMx/sqrt(x^2+y^2)^3
 #y'' = -GMy/sqrt(x^2+y^2)^3
@@ -12,72 +13,219 @@ import math
 #v' = -GMy/(x^2+y^2)^3
 
 
-#m = 5.0
-t = 1.0
-x = 1.0
-y = 0.0
-u = 0.0
-v = 1.3
-#k = 0.5/m
-#b = 0.2/m
-G = math.pow(6.67, -8)
-M = math.pow(1.99, 33)
+n_particles = 1000  #4.5 minutes for 100 particles, also 4.5 minutes for 1000 particles
 
-omega = math.sqrt(G*M/(x**2+y**2))
+t = 0.0
+
+x0 = 1./math.sqrt(2)
+y0 = -1./math.sqrt(2)
+z0 = 0.0
+
+lightcurve = []
+
+xvector = [x0]*n_particles
+yvector = [y0]*n_particles
+zvector = [z0]*n_particles
+
+uvector = [0]*n_particles
+vvector = [0]*n_particles
+wvector = [0]*n_particles
+
+xrotvec = [0]*n_particles
+yrotvec = [0]*n_particles
+zrotvec = [0]*n_particles
+
+v_particle = 0.001 #actually is the v/V ratio, where v is v_particle and V is v_body
+beta0 = 0.01
+
+betavec = [beta0]*n_particles
+
+anglesrand = np.random.rand(n_particles, 2)
+betaran = np.random.rand(n_particles)
+
+for particle in xrange(n_particles):
+    theta = math.acos(1. - 2.*anglesrand[particle, 0])
+    phi = 2.*math.pi*anglesrand[particle, 1]
+
+    u0 = v_particle*math.sin(theta)*math.cos(phi)+1./math.sqrt(2)
+    v0 = v_particle*math.sin(theta)*math.sin(phi)+1./math.sqrt(2)
+    w0 = v_particle*math.cos(theta)
+
+    uvector[particle] = u0
+    vvector[particle] = v0
+    wvector[particle] = w0
+
+    betavec[particle] += 0.19*betaran[particle]
 
 dt = 0.1
 
+v_ratiostr = "{} = {}".format("v/V", v_particle)
+#betastr = "{} = {}".format("Beta", beta)
+
 #real units of time are acquired by using T * P / 2pi, where T is t in loop and P is period of 1 radian in orbit
 
-tvector = []
-xvector = []
-yvector = []
-tvector.append(t)
-xvector.append(x)
-yvector.append(y)
+timespan = np.linspace(0, 99.9, 1000) #end time = (dt*n_steps)-dt, or (0.1*1000)-0.1
 
-while (t < 200.0):
+#while (t < 100.0):
+for t in timespan:
 
-    ix_0 = dt*(u)                                                         #dt*f(t, x, u)
-    jx_0 = dt*(-x/(math.sqrt(x**2+y**2))**3)                            #dt*g(t, x, u)
+    count = 0
 
-    iy_0 = dt*(v)                                                         #dt*f(t, x, u)
-    jy_0 = dt*(-y/(math.sqrt(x**2+y**2))**3)                                                #dt*g(t, x, u)
+    for particle in xrange(n_particles):
+
+        beta = betavec[particle]
+
+        x = xvector[particle]
+        y = yvector[particle]
+        z = zvector[particle]
+
+        u = uvector[particle]
+        v = vvector[particle]
+        w = wvector[particle]
+
+        #radc = (x**2 + y**2 + z**2)**3
+        #rootradc = math.sqrt(radc)
+
+
+        ix_0 = dt*(u)                                                         #dt*f(t, x, u)
+        jx_0 = dt*(-x*(1-beta)/(math.sqrt(x**2+y**2+z**2))**3)                            #dt*g(t, x, u)
     
-    ix_1 = dt*(u + jx_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
-    jx_1 = dt*(-(x + ix_0/2.)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
+        iy_0 = dt*(v)                                                         #dt*f(t, x, u)
+        jy_0 = dt*(-y*(1-beta)/(math.sqrt(x**2+y**2+z**2))**3)                                                #dt*g(t, x, u)
 
-    iy_1 = dt*(v + jy_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
-    jy_1 = dt*(-(y + iy_0/2.)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
+        iz_0 = dt*(w)                           
+        jz_0 = dt*(-z*(1-beta)/(math.sqrt(x**2+y**2+z**2))**3)
+        
+        ix_1 = dt*(u + jx_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
+        jx_1 = dt*(-(x + ix_0/2.)*(1.-beta)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2+(z + iz_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
     
-    ix_2 = dt*(u + jx_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
-    jx_2 = dt*(-(x + ix_1/2.)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
+        iy_1 = dt*(v + jy_0/2.)                                               #dt*f(t + dt/2., x + ix_0/2., u + jx_0/2.)
+        jy_1 = dt*(-(y + iy_0/2.)*(1.-beta)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2+(z + iz_0/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_0/2., u + jx_0/2.)
 
-    iy_2 = dt*(v + jy_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
-    jy_2 = dt*(-(y + iy_1/2.)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
+        iz_1 = dt*(w + jz_0/2.)                                               
+        jz_1 = dt*(-(z + iz_0/2.)*(1.-beta)/(math.sqrt((x + ix_0/2.)**2+(y + iy_0/2.)**2+(z + iz_0/2.)**2))**3)
+        
+        ix_2 = dt*(u + jx_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
+        jx_2 = dt*(-(x + ix_1/2.)*(1.-beta)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2+(z + iz_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
     
-    ix_3 = dt*(u + jx_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
-    jx_3 = dt*(-(x + ix_2)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
+        iy_2 = dt*(v + jy_1/2.)                                               #dt*f(t + dt/2., x + ix_1/2., u + jx_1/2.)
+        jy_2 = dt*(-(y + iy_1/2.)*(1.-beta)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2+(z + iz_1/2.)**2))**3)                        #dt*g(t + dt/2., x + ix_1/2., u + jx_1/2.)
 
-    iy_3 = dt*(v + jy_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
-    jy_3 = dt*(-(y + iy_2)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
+        iz_2 = dt*(w + jz_1/2.)                                               #dt*f(
+        jz_2 = dt*(-(z + iz_1/2.)*(1.-beta)/(math.sqrt((x + ix_1/2.)**2+(y + iy_1/2.)**2+(z + iz_1/2.)**2))**3)
+        
+        ix_3 = dt*(u + jx_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
+        jx_3 = dt*(-(x + ix_2)*(1.-beta)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2+(z + iz_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
+    
+        iy_3 = dt*(v + jy_2)                                                  #dt*f(t + dt, x + ix_2, u + jx_2)
+        jy_3 = dt*(-(y + iy_2)*(1.-beta)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2+(z + iz_2)**2))**3)                              #dt*g(t + dt, x + ix_2, u + jx_2)
+
+        iz_3 = dt*(w + jz_2)                                               
+        jz_3 = dt*(-(z + iz_2)*(1.-beta)/(math.sqrt((x + ix_2)**2+(y + iy_2)**2+(z + iz_2)**2))**3)
+    
+        x = x + (1./6.)*(ix_0 + 2*ix_1 + 2*ix_2 + ix_3)
+        u = u + (1./6.)*(jx_0 + 2*jx_1 + 2*jx_2 + jx_3)
+    
+        y = y + (1./6.)*(iy_0 + 2*iy_1 + 2*iy_2 + iy_3)
+        v = v + (1./6.)*(jy_0 + 2*jy_1 + 2*jy_2 + jy_3)
+
+        z = z + (1./6.)*(iz_0 + 2*iz_1 + 2*iz_2 + iz_3)
+        w = w + (1./6.)*(jz_0 + 2*jz_1 + 2*jz_2 + jz_3)
+
+        sine = math.sin(t)
+        cosine = math.cos(t)
+
+        xvector[particle] = x
+        yvector[particle] = y
+        zvector[particle] = z
+
+        uvector[particle] = u
+        vvector[particle] = v
+        wvector[particle] = w
+
+        xrotvec[particle] = x*cosine + y*sine
+        yrotvec[particle] = y*cosine - x*sine
+        zrotvec[particle] = z
+
+        if ((x**2+z**2) < (0.011)**2 and y < 0.): 
+            count += 1 
+
+    lightcurve.append(count)
+
+    circle1 = plt.Circle((0,0), 0.011, color='cyan')
+    circle2 = plt.Circle((0,0), 0.011, color='cyan')
+    circle3 = plt.Circle((0,0), 0.011, color='cyan')
+    circle4 = plt.Circle((0,0), 0.011, color='cyan')
+
+    plt.axis('equal')
+    ax = plt.gca()
+    ax.set_xlim([-1.2*1.2, 1.2*1.2])
+    ax.set_ylim([-1.2, 1.2])
+    ax.add_artist(circle1)
+    plt.plot(xrotvec, yrotvec, 'ro', ms=1)
+    plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
+    #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
+    figname = '{}{}'.format('RKExplodingOrbit/xyimgrot', int(t*10))
+    plt.savefig(figname)
+    plt.close()
+
+    plt.axis('equal')
+    ax3 = plt.gca()
+    ax3.set_xlim([-1.2*1.2, 1.2*1.2])
+    ax3.set_ylim([-1.2, 1.2])
+    ax3.add_artist(circle2)
+    plt.plot(xvector, yvector, 'ro', ms=1)
+    plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
+    #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
+    figname3 = '{}{}'.format('RKExplodingOrbit/xyimg', int(t*10))
+    plt.savefig(figname3)
+    plt.close()
+
+    plt.axis('equal')
+    ax2 = plt.gca()
+    ax2.set_xlim([-1.2*1.2, 1.2*1.2])
+    ax2.set_ylim([-1.2, 1.2])
+    ax2.add_artist(circle3)
+    plt.plot(xrotvec, zrotvec, 'ro', ms=1)
+    plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
+    #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
+    figname2 = '{}{}'.format('RKExplodingOrbit/xzimgrot', int(t*10))
+    plt.savefig(figname2)
+    plt.close()
+
+    plt.axis('equal')
+    ax4 = plt.gca()
+    ax4.set_xlim([-1.2*1.2, 1.2*1.2])
+    ax4.set_ylim([-1.2, 1.2])
+    ax4.add_artist(circle4)
+    plt.plot(xvector, zvector, 'ro', ms=1)
+    plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
+    #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
+    figname4 = '{}{}'.format('RKExplodingOrbit/xzimg', int(t*10))
+    plt.savefig(figname4)
+    plt.close()
 
     t = t + dt
 
-    x = x + (1/6.)*(ix_0 + 2*ix_1 + 2*ix_2 + ix_3)
-    u = u + (1/6.)*(jx_0 + 2*jx_1 + 2*jx_2 + jx_3)
+#period = 2*math.pi
 
-    y = y + (1/6.)*(iy_0 + 2*iy_1 + 2*iy_2 + iy_3)
-    v = v + (1/6.)*(jy_0 + 2*jy_1 + 2*jy_2 + jy_3)
-    
-    
-    tvector.append(t)
-    xvector.append(x)
-    yvector.append(y)
+#foldarray = [0] * 100
+#exposure = [0] * 100
+#for i in range(0, len(lightcurve)):
+#    frac = (lightcurve[i]%period)/period
+#    foldarray[int(frac*100)] += lightcurve[i]
+#    exposure[int(frac*100)] += 1
+#foldedcurve = np.divide(foldarray, exposure)
+foldedcurvebins = np.linspace(0, 100, len(lightcurve))
+norm = [1000]*len(lightcurve)
+for i in xrange(len(lightcurve)):
+    lightcurve[i] = norm[i] - lightcurve[i]
 
-plt.axis('equal')
-plt.plot(xvector, yvector, 'k')
-plt.show()
+plt.step(foldedcurvebins, lightcurve, 'k')
+plt.savefig('LightCurve')
+plt.close()
+
+    #del circle1, circle2, circle3, circle4
 #fig = plt.figure()
 #ax = fig.gca(projection='3d')
 #ax.plot(xvector, yvector, tvector, label='parametric curve')
@@ -107,10 +255,10 @@ plt.show()
 
 #m = 5.0
 #t = 1.0
-#x = 0.0 
-#y = 0.0 
-#u = 0.5 
-#v = 0.5 
+#x = 0.0
+#y = 0.0
+#u = 0.5
+#v = 0.5
 ##k = 0.5/m
 #drag = 0.15/m #drag
 #a = 1.0/m #general constants
