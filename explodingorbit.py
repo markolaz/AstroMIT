@@ -9,6 +9,8 @@ anglesrand = np.random.rand(n_particles, 2)
 a = 1.
 p = 4000.
 
+#restrict theta in same way, put in beta value and v/V value, take theta equal to exactly 5 degrees, take 4 values of phi (0, 90, 180, 270), for each value of phi, print new period, print as % difference
+
 for t in xrange(1000):
 
 	xvector = []

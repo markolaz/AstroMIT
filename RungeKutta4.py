@@ -35,8 +35,8 @@ xrotvec = [0]*n_particles
 yrotvec = [0]*n_particles
 zrotvec = [0]*n_particles
 
-v_particle = 0.001 #actually is the v/V ratio, where v is v_particle and V is v_body
-beta0 = 0.01
+v_particle = 0.01 #actually is the v/V ratio, where v is v_particle and V is v_body
+beta0 = 0.0001
 
 betavec = [beta0]*n_particles
 
@@ -44,7 +44,16 @@ anglesrand = np.random.rand(n_particles, 2)
 betaran = np.random.rand(n_particles)
 
 for particle in xrange(n_particles):
-    theta = math.acos(1. - 2.*anglesrand[particle, 0])
+
+    #temptheta = math.acos(1 - 0.0038*anglesrand[particle, 0]) #0.0038 is (1 - cosine of 5 degrees), the radius of the cone at the top and bottom of the z-axis
+
+    #if anglesrand[particle, 0] < 0.5:
+    #    theta = temptheta
+    #if anglesrand[particle, 0] >= 0.5:
+    #    theta = math.pi - temptheta
+
+    #theta = math.acos(1. - 2.*anglesrand[particle, 0])
+    theta = 0           #testing if at theta = 0 there should be little to no expansion in x or y, only z-direction
     phi = 2.*math.pi*anglesrand[particle, 1]
 
     u0 = v_particle*math.sin(theta)*math.cos(phi)+1./math.sqrt(2)
@@ -55,7 +64,10 @@ for particle in xrange(n_particles):
     vvector[particle] = v0
     wvector[particle] = w0
 
-    betavec[particle] += 0.19*betaran[particle]
+    #betavec[particle] += 0.19*betaran[particle]
+
+    #if betaran[particle] < 0.5:
+    #    betavec[particle] = 0.1
 
 dt = 0.1
 
@@ -66,7 +78,6 @@ v_ratiostr = "{} = {}".format("v/V", v_particle)
 
 timespan = np.linspace(0, 99.9, 1000) #end time = (dt*n_steps)-dt, or (0.1*1000)-0.1
 
-#while (t < 100.0):
 for t in timespan:
 
     count = 0
@@ -225,11 +236,6 @@ plt.step(foldedcurvebins, lightcurve, 'k')
 plt.savefig('LightCurve')
 plt.close()
 
-    #del circle1, circle2, circle3, circle4
-#fig = plt.figure()
-#ax = fig.gca(projection='3d')
-#ax.plot(xvector, yvector, tvector, label='parametric curve')
-#plt.show()
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
