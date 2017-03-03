@@ -2,12 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-beta = 0.0005
-v_ratio = 0.005
-n_particles = 300
+beta = 0.0001
+v_ratio = 0.01
+n_particles = 100
 anglesrand = np.random.rand(n_particles, 2)
 a = 1.
 p = 4000.
+
+pvector = [p]*n_particles
+newpvector = [0]*n_particles
+
+phirange = np.linspace(0, 270, 4)
 
 #restrict theta in same way, put in beta value and v/V value, take theta equal to exactly 5 degrees, take 4 values of phi (0, 90, 180, 270), for each value of phi, print new period, print as % difference
 
@@ -22,8 +27,16 @@ for t in xrange(1000):
 
 	for particle in xrange(n_particles):
 
-		theta = math.acos(1. - 2.*anglesrand[particle, 0])
-		phi = 2.*math.pi*anglesrand[particle, 1]
+		#theta = math.acos(1. - 2.*anglesrand[particle, 0])
+		theta = math.acos(1 - 0.0038)
+		#phi = 2.*math.pi*anglesrand[particle, 1]
+		if anglesrand[particle, 1] < 0.25:
+			phi = math.radians(phirange[0])
+		elif anglesrand[particle, 1] < 0.50:
+			phi = math.radians(phirange[1])
+		elif anglesrand[particle, 1] < 0.75:
+			phi = math.radians(phirange[2])
+		else: phi = math.radians(phirange[3])
 	
 		xi = 2.*v_ratio*math.sin(theta)*math.cos(phi) + v_ratio**2
 		chi = 2.*v_ratio*math.sin(theta)*math.cos(phi) + (v_ratio**2)*(math.sin(theta)**2*math.cos(phi)**2 + math.cos(phi)**2)

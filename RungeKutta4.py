@@ -21,6 +21,10 @@ x0 = 1./math.sqrt(2)
 y0 = -1./math.sqrt(2)
 z0 = 0.0
 
+# impact parameter, b, is the z-coordinate
+# D is distance from particle (center of ribbon) to center of star
+# L is full distance of ribbon projection
+
 lightcurve = []
 
 xvector = [x0]*n_particles
@@ -52,8 +56,8 @@ for particle in xrange(n_particles):
     #if anglesrand[particle, 0] >= 0.5:
     #    theta = math.pi - temptheta
 
-    #theta = math.acos(1. - 2.*anglesrand[particle, 0])
-    theta = 0           #testing if at theta = 0 there should be little to no expansion in x or y, only z-direction
+    theta = math.acos(1. - 2.*anglesrand[particle, 0])
+    #theta = 0           #testing if at theta = 0 there should be little to no expansion in x or y, only z-direction
     phi = 2.*math.pi*anglesrand[particle, 1]
 
     u0 = v_particle*math.sin(theta)*math.cos(phi)+1./math.sqrt(2)
@@ -93,10 +97,6 @@ for t in timespan:
         u = uvector[particle]
         v = vvector[particle]
         w = wvector[particle]
-
-        #radc = (x**2 + y**2 + z**2)**3
-        #rootradc = math.sqrt(radc)
-
 
         ix_0 = dt*(u)                                                         #dt*f(t, x, u)
         jx_0 = dt*(-x*(1-beta)/(math.sqrt(x**2+y**2+z**2))**3)                            #dt*g(t, x, u)
@@ -167,12 +167,17 @@ for t in timespan:
     circle2 = plt.Circle((0,0), 0.011, color='cyan')
     circle3 = plt.Circle((0,0), 0.011, color='cyan')
     circle4 = plt.Circle((0,0), 0.011, color='cyan')
+    circle5 = plt.Circle((0,0), 1.0, color='red', fill=False)
+    circle6 = plt.Circle((0,0), 1.0, color='red', fill=False)
+    circle7 = plt.Circle((0,0), 1.0, color='red', fill=False)
+    circle8 = plt.Circle((0,0), 1.0, color='red', fill=False)
 
     plt.axis('equal')
     ax = plt.gca()
     ax.set_xlim([-1.2*1.2, 1.2*1.2])
     ax.set_ylim([-1.2, 1.2])
     ax.add_artist(circle1)
+    ax.add_artist(circle5)
     plt.plot(xrotvec, yrotvec, 'ro', ms=1)
     plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
     #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
@@ -185,6 +190,7 @@ for t in timespan:
     ax3.set_xlim([-1.2*1.2, 1.2*1.2])
     ax3.set_ylim([-1.2, 1.2])
     ax3.add_artist(circle2)
+    ax3.add_artist(circle6)
     plt.plot(xvector, yvector, 'ro', ms=1)
     plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
     #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
@@ -197,6 +203,7 @@ for t in timespan:
     ax2.set_xlim([-1.2*1.2, 1.2*1.2])
     ax2.set_ylim([-1.2, 1.2])
     ax2.add_artist(circle3)
+    ax2.add_artist(circle7)
     plt.plot(xrotvec, zrotvec, 'ro', ms=1)
     plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
     #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
@@ -209,6 +216,7 @@ for t in timespan:
     ax4.set_xlim([-1.2*1.2, 1.2*1.2])
     ax4.set_ylim([-1.2, 1.2])
     ax4.add_artist(circle4)
+    ax4.add_artist(circle8)
     plt.plot(xvector, zvector, 'ro', ms=1)
     plt.figtext(0.705, 0.825, v_ratiostr, fontsize = 'large')
     #plt.figtext(0.705, 0.785, betastr, fontsize = 'large')
