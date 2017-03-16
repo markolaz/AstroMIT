@@ -13,7 +13,7 @@ import numpy as np
 #v' = -GMy/(x^2+y^2)^3
 
 
-n_particles = 1000  #4.5 minutes for 100 particles, also 4.5 minutes for 1000 particles
+n_particles = 100  #4.5 minutes for 100 particles, also 4.5 minutes for 1000 particles
 
 t = 0.0
 
@@ -39,8 +39,8 @@ xrotvec = [0]*n_particles
 yrotvec = [0]*n_particles
 zrotvec = [0]*n_particles
 
-v_particle = 0.01 #actually is the v/V ratio, where v is v_particle and V is v_body
-beta0 = 0.0001
+v_particle = 0.008 #actually is the v/V ratio, where v is v_particle and V is v_body
+beta0 = 0.
 
 betavec = [beta0]*n_particles
 
@@ -68,6 +68,8 @@ for particle in xrange(n_particles):
     vvector[particle] = v0
     wvector[particle] = w0
 
+    #thetavec[particle] = theta
+
     #betavec[particle] += 0.19*betaran[particle]
 
     #if betaran[particle] < 0.5:
@@ -80,11 +82,20 @@ v_ratiostr = "{} = {}".format("v/V", v_particle)
 
 #real units of time are acquired by using T * P / 2pi, where T is t in loop and P is period of 1 radian in orbit
 
-timespan = np.linspace(0, 99.9, 1000) #end time = (dt*n_steps)-dt, or (0.1*1000)-0.1
+timespan = np.linspace(0, 199.9, 2000) #end time = (dt*n_steps)-dt, or (0.1*1000)-0.1
+#timespan = np.linspace(0, 5.9, 60)
+
+#xgridrange = np.linspace(-0.01, 0.01, 201)
+#zgridrange = np.linspace(-0.01, 0.01, 201)
+xgridrange = np.linspace(0, 200, 201)
+zgridrange = np.linspace(0, 200, 201)
 
 for t in timespan:
 
-    count = 0
+    count = 0.
+
+    WDgrid = np.array([[0.]*201 for _ in range(201)])
+    WDgrid.shape = (201, 201)
 
     for particle in xrange(n_particles):
 
@@ -158,10 +169,38 @@ for t in timespan:
         yrotvec[particle] = y*cosine - x*sine
         zrotvec[particle] = z
 
-        if ((x**2+z**2) < (0.011)**2 and y < 0.): 
-            count += 1 
+        radius = math.sqrt(x**2+y**2)
 
-    lightcurve.append(count)
+        theta = math.atan2(y, x)
+        theta_ribbon = 1.0
+        thetamax = theta+theta_ribbon
+        thetamin = theta-theta_ribbon
+
+        xmax_ribbon = math.cos(thetamax)*radius
+        xmin_ribbon = math.cos(thetamin)*radius
+        xcen_ribbon = math.cos(theta)*radius
+
+        thetaref = math.atan2(-1, 0)
+        x_ref_min = math.cos(thetaref-1)*radius
+        x_ref_max = math.cos(thetaref+1)*radius
+
+        z_ribbon = z
+
+        #print 'x \t \t y \t \t \t  z \t \t \t theta \t \t radius \t radius*sin \t radius*cos'
+        #print x, '\t', y, '\t', z, '\t', theta, '\t', radius, '\t', radius*math.sin(theta), '\t', radius*math.cos(theta)
+
+        #print xmin_ribbon, xmax_ribbon, z_ribbon-(5./1000), z_ribbon+(5./1000), z
+
+        if (x_ref_min-0.01) <= x <= (x_ref_max+0.01) and y < 0:
+            for xvalue in xgridrange:
+                for zvalue in zgridrange:
+                    if (xmin_ribbon <= (xvalue-100.)/10000 and xmax_ribbon >= (xvalue-100.)/10000 and y < 0 and z_ribbon-(3./10000) <= (zvalue-100.)/10000 and z_ribbon+(3./10000) >= (zvalue-100.)/10000 and WDgrid[int(zvalue),int(xvalue)]==0):
+                        WDgrid[int(zvalue), int(xvalue)] = 1
+                        if math.sqrt(int(zvalue-100)**2 + int(xvalue-100)**2) < 100.5: count += 1
+        #if ((x**2+z**2) < (0.011)**2 and y < 0.): 
+        #    count += 1 
+
+    lightcurve.append(count/((100.5**2)*math.pi))
 
     circle1 = plt.Circle((0,0), 0.011, color='cyan')
     circle2 = plt.Circle((0,0), 0.011, color='cyan')
@@ -224,6 +263,13 @@ for t in timespan:
     plt.savefig(figname4)
     plt.close()
 
+    ax5 = plt.gca()
+    ax5.set_aspect('equal')
+    plt.imshow(WDgrid, origin='lower')
+    figname5 = '{}{}'.format('RKExplodingOrbit/gridplot', int(t*10))
+    plt.savefig(figname5)
+    plt.close()
+
     t = t + dt
 
 #period = 2*math.pi
@@ -235,8 +281,9 @@ for t in timespan:
 #    foldarray[int(frac*100)] += lightcurve[i]
 #    exposure[int(frac*100)] += 1
 #foldedcurve = np.divide(foldarray, exposure)
+
 foldedcurvebins = np.linspace(0, 100, len(lightcurve))
-norm = [1000]*len(lightcurve)
+norm = [1]*len(lightcurve)
 for i in xrange(len(lightcurve)):
     lightcurve[i] = norm[i] - lightcurve[i]
 
