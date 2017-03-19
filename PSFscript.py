@@ -2,19 +2,62 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import random
+
+def axes_rotation(input_array):
+	"""reversing x and y data to correct for rotation done by matshow (if not done, X and Y axes will be swapped)"""
+	output_array = input_array[:]
+	for i in range(len(input_array)):
+		for j in range(len(input_array[i])):
+			for k in range(len(input_array[i])):
+				output_array[i][j, k] = input_array[i][k, j]
+				return output_array
+
+np.random.seed(100)
 
 datapsf1 = np.random.random((13,13))
 datapsf2 = np.random.random((13,13))
 datapsf3 = np.random.random((13,13))
 datapsf4 = np.random.random((13,13))
-datapsfw = np.random.random((13,13))
+datapsf5 = np.random.random((13,13))
 
 dat_array = []
-dat_array.append(datapsf1)
-dat_array.append(datapsf2)
-dat_array.append(datapsfw)
-dat_array.append(datapsf3)
-dat_array.append(datapsf4)
+dat_array.extend((datapsf1, datapsf2, datapsf3, datapsf4, datapsf5))
+
+plt.figure()
+gs1 = gridspec.GridSpec(3, 3)
+gs1.update(wspace=0.0001, hspace=0.0001) 
+
+for i in range(9):
+	if i == 0 or i == 2 or i == 4 or i == 6 or i == 8:
+		print dat_array[i/2][0, 12]
+		ax = plt.subplot(gs1[i])
+		plt.axis('on')
+		plt.tick_params(axis=u'both', which=u'both', length=0)
+		ax.set_aspect('equal')
+		ax.matshow(dat_array[i/2], origin='lower', cmap='Blues', alpha=1)
+		#for (i, j), z in np.ndenumerate(dat_array[i/2]):
+		#    ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center')
+		ax.set_xticks(np.arange(0, 13, 1))
+		ax.set_yticks(np.arange(0, 13, 1))
+		ax.set_xticklabels(np.arange(0, 13, 1))
+		ax.set_yticklabels(np.arange(0, 13, 1))
+		ax.set_xlabel('X')
+		ax.set_ylabel('Y')
+		title = "{} {}".format('PSF', (i/2)+1)
+		if i > 4:
+			title = "{} {}".format('PSF', (i/2))
+		ax.set_title(title)
+		if i == 4:
+			ax.set_title("Weighted PSF")
+
+mng = plt.get_current_fig_manager()
+mng.full_screen_toggle()
+plt.show()
+
+
+
+
 
 #fig = plt.figure()
 #fig.add_subplot(331)
@@ -82,20 +125,3 @@ dat_array.append(datapsf4)
 #plt.subplots_adjust(wspace=0.001, hspace=0.001)
 #
 #plt.savefig('test1.png')
-
-
-plt.figure()
-gs1 = gridspec.GridSpec(3, 3)
-gs1.update(wspace=0.0001, hspace=0.0001) # set the spacing between axes. 
-
-for i in range(9):
-	if i == 0 or i == 2 or i == 4 or i == 6 or i == 8:
-		print i
-		ax1 = plt.subplot(gs1[i])
-		plt.axis('on')
-		ax1.set_xticklabels([])
-		ax1.set_yticklabels([])
-		ax1.set_aspect('equal')
-		ax1.matshow(dat_array[i/2], origin='lower', cmap='Blues', alpha=1)
-
-plt.savefig('test2.png')
