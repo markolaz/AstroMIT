@@ -6,31 +6,52 @@ import random
 
 def axes_rotation(input_array):
 	"""reversing x and y data to correct for rotation done by matshow (if not done, X and Y axes will be swapped)"""
-	output_array = input_array[:]
+	output_array = np.zeros_like(input_array)
 	for i in range(len(input_array)):
 		for j in range(len(input_array[i])):
 			for k in range(len(input_array[i])):
 				output_array[i][j, k] = input_array[i][k, j]
-				return output_array
+	return output_array
+
+def psf_bilinear_interpolation(psfarray1, psfarray2, psfarray3, psfarray4):
+	weighted_psf = np.zeros((13, 13))
+	x1 = y1 = 0
+	x2 = y2 = len(psfarray1)
+	for j in np.linspace(0, x2-1, x2):
+		for k in np.linspace(0, y2-1, y2):
+			V_11 = psfarray1[int(j), int(k)]
+			V_21 = psfarray2[int(j), int(k)]
+			V_12 = psfarray3[int(j), int(k)]
+			V_22 = psfarray4[int(j), int(k)]
+			w_11 = (k - y2) / (y2 - y1) * (j - x2) / (x2 - x1)
+			w_21 = -(k - y2) / (y2 - y1) * (j - x1) / (x2 - x1)
+			w_12 = -(k - y1) / (y2 - y1) * (j - x2) / (x2 - x1)
+			w_22 = (k - y1) / (y2 - y1) * (j - x1) / (x2 - x1)
+			weighted_psf[int(j), int(k)] = w_11*V_11 + w_21*V_21 + w_12*V_12 + w_22*V_22
+	return weighted_psf
 
 np.random.seed(100)
 
 datapsf1 = np.random.random((13,13))
 datapsf2 = np.random.random((13,13))
-datapsf3 = np.random.random((13,13))
+#datapsf3 = np.random.random((13,13))
 datapsf4 = np.random.random((13,13))
 datapsf5 = np.random.random((13,13))
+datapsf3 = psf_bilinear_interpolation(datapsf1, datapsf2, datapsf4, datapsf5)
 
 dat_array = []
 dat_array.extend((datapsf1, datapsf2, datapsf3, datapsf4, datapsf5))
 
+dat_array = axes_rotation(dat_array)
+
 plt.figure()
 gs1 = gridspec.GridSpec(3, 3)
-gs1.update(wspace=0.0001, hspace=0.0001) 
+gs1.update(wspace=0.0001, hspace=0.0001)
+
+plots = np.linspace(0, 8, 5)
 
 for i in range(9):
-	if i == 0 or i == 2 or i == 4 or i == 6 or i == 8:
-		print dat_array[i/2][0, 12]
+	if i in plots:
 		ax = plt.subplot(gs1[i])
 		plt.axis('on')
 		plt.tick_params(axis=u'both', which=u'both', length=0)
