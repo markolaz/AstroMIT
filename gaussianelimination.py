@@ -4,16 +4,19 @@ import math
 
 n_params = 21
 
+#file = open('GaussElimData/206005460_2146.47_2.18_3.53_ltf.lc')
+#file = open('GaussElimData/206059064_2179.16_15.62_3.44_ltf.lc')
+file = open('GaussElimData/206067215_2146.62_27.89_2.50_ltf.lc')
 #file = open('/home/marko/Desktop/MIT Research/KIC012557548.dat', 'r')
-file = open('/home/marko/Desktop/MIT Research/KIC008153499.dat', 'r')
+#file = open('/home/marko/Desktop/MIT Research/KIC008153499.dat', 'r')
 file.next()
 file.next()
 
 time = []
 flux = []
 
-data_period = 25.    #in days
-shortest_period = 2.5 #in days
+data_period = 10.    #in days
+shortest_period = 0.5 #in days
 f_max = 1./shortest_period
 delta_f = 1./data_period
 
@@ -23,6 +26,7 @@ for line in file:
 	parts = line.split()
 	time.append(float(parts[0]))
 	flux.append(float(parts[1]))
+	#flux.append(float(parts[2]))
 
 maxtime = int(data_period*round(float(time[-2])/data_period))
 
@@ -38,7 +42,7 @@ datafull = []
 
 for val in xrange(len(timesplit)):
 #for val in range(0, len(timesplit)):
-	if val==maxtime: continue
+	if timesplit[val]==maxtime: continue
 	time50 = [t for t in time if timesplit[val] <= t <= timesplit[val+1]]
 	data50 = [flux[time.index(t)] for t in time50]
 
@@ -117,36 +121,39 @@ for val in xrange(len(timesplit)):
 	
 		fit50.extend(data50[x]-(fit1+fit2+fit3+fit4+fit5+fit6+fit7+fit8+fit9+fit10+fit11+fit12+fit13+fit14+fit15+fit16+fit17+fit18+fit19+fit20+fit21))
 
-	#timefull.extend(time50)
+	timefull.extend(time50)
 	datafull.extend(data50)
 	fitfull.extend(fit50)
 	#for x in xrange(len(time50)):
 	#	fitfull[((val-1)*len(time50))+x] = fit50[x]
 	#	timefull[((val-1)*len(time50))+x] = time50[x]
 	#	datafull[((val-1)*len(time50))+x] = data50[x]
-	#fig = plt.figure()
-	#sp1 = fig.add_subplot(211)
-	#sp1.step(time50, data50, 'k')
-	#
-	#sp2 = fig.add_subplot(212)
-	#sp2.step(time50, fit50, 'k')
+	fig = plt.figure()
+	sp1 = fig.add_subplot(211)
+	sp1.step(time50, data50, 'k')
+	
+	sp2 = fig.add_subplot(212)
+	sp2.step(time50, fit50, 'k')
 #
-	#figname = 'fig' + str(val)
-	#plt.savefig(figname)
+	figname = 'GaussElimData/fig' + str(val)
+	plt.savefig(figname)
 #
-	#plt.close()
+	plt.close()
 
 	del time50, fit50, fvector, data50, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8, fit9, fit10, fit11, fit12, fit13, fit14, fit15, fit16, fit17, fit18, fit19, fit20
 
-#fig2 = plt.figure()
-#
-#splt1 = fig2.add_subplot(211)
-#splt1.step(time[:-2], flux[:-2], 'k')
-#
-#splt2 = fig2.add_subplot(212)
-#splt2.step(timefull, fitfull, 'k')
-#
-#plt.show()
+fig2 = plt.figure()
+
+for value in range(len(flux)):
+	flux[value] -= 1
+
+splt1 = fig2.add_subplot(211)
+splt1.step(time[:-2], flux[:-2], 'k')
+
+splt2 = fig2.add_subplot(212, sharex=splt1, sharey=splt1)
+splt2.step(timefull, fitfull, 'k')
+
+plt.show()
 
 
 
