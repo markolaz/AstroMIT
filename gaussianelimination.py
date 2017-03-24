@@ -57,29 +57,37 @@ for val in xrange(len(timesplit)):
 	#	d = (19.2 + 16.5*(t/100.) - 134*((t/100.)**2) + 449*((t/100.)**3))
 		t = time50[x]
 		d = data50[x]
-		f1 = math.sin(2*math.pi*freqrange[0]*t)
-		f2 = math.sin(2*math.pi*freqrange[1]*t)
-		f3 = math.sin(2*math.pi*freqrange[2]*t)
-		f4 = math.sin(2*math.pi*freqrange[3]*t)
-		f5 = math.sin(2*math.pi*freqrange[4]*t)
-		f6 = math.sin(2*math.pi*freqrange[5]*t)
-		f7 = math.sin(2*math.pi*freqrange[6]*t)
-		f8 = math.sin(2*math.pi*freqrange[7]*t)
-		f9 = math.sin(2*math.pi*freqrange[8]*t)
-		f10 = math.sin(2*math.pi*freqrange[9]*t)
-		f11 = math.cos(2*math.pi*freqrange[0]*t)
-		f12 = math.cos(2*math.pi*freqrange[1]*t)
-		f13 = math.cos(2*math.pi*freqrange[2]*t)
-		f14 = math.cos(2*math.pi*freqrange[3]*t)
-		f15 = math.cos(2*math.pi*freqrange[4]*t)
-		f16 = math.cos(2*math.pi*freqrange[5]*t)
-		f17 = math.cos(2*math.pi*freqrange[6]*t)
-		f18 = math.cos(2*math.pi*freqrange[7]*t)
-		f19 = math.cos(2*math.pi*freqrange[8]*t)
-		f20 = math.cos(2*math.pi*freqrange[9]*t)
-		f21 = 1.
+		#f1 = math.sin(2*math.pi*freqrange[0]*t)
+		#f2 = math.sin(2*math.pi*freqrange[1]*t)
+		#f3 = math.sin(2*math.pi*freqrange[2]*t)
+		#f4 = math.sin(2*math.pi*freqrange[3]*t)
+		#f5 = math.sin(2*math.pi*freqrange[4]*t)
+		#f6 = math.sin(2*math.pi*freqrange[5]*t)
+		#f7 = math.sin(2*math.pi*freqrange[6]*t)
+		#f8 = math.sin(2*math.pi*freqrange[7]*t)
+		#f9 = math.sin(2*math.pi*freqrange[8]*t)
+		#f10 = math.sin(2*math.pi*freqrange[9]*t)
+		#f11 = math.cos(2*math.pi*freqrange[0]*t)
+		#f12 = math.cos(2*math.pi*freqrange[1]*t)
+		#f13 = math.cos(2*math.pi*freqrange[2]*t)
+		#f14 = math.cos(2*math.pi*freqrange[3]*t)
+		#f15 = math.cos(2*math.pi*freqrange[4]*t)
+		#f16 = math.cos(2*math.pi*freqrange[5]*t)
+		#f17 = math.cos(2*math.pi*freqrange[6]*t)
+		#f18 = math.cos(2*math.pi*freqrange[7]*t)
+		#f19 = math.cos(2*math.pi*freqrange[8]*t)
+		#f20 = math.cos(2*math.pi*freqrange[9]*t)
+		#f21 = 1.
+
+		fsinvector = [math.sin(2*math.pi*freqrange[i]*t) for i in range(len(freqrange)/2)]
+		fcosvector = [math.cos(2*math.pi*freqrange[i]*t) for i in range(len(freqrange)/2)]
+		
+		fvector = fsinvector
+		fvector.extend(fcosvector)
+		fvector.append(1)
+
 	
-		fvector = [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21]
+		#fvector = [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21]
 	
 		for row in range(n_params):
 			for column in range(n_params):
@@ -97,29 +105,36 @@ for val in xrange(len(timesplit)):
 	
 	for x in xrange(len(time50)):
 		t = time50[x]
-		fit1 =  solmatrix[0]*math.sin(2*math.pi*freqrange[0]*t)
-		fit2 =  solmatrix[1]*math.sin(2*math.pi*freqrange[1]*t)
-		fit3 =  solmatrix[2]*math.sin(2*math.pi*freqrange[2]*t)
-		fit4 =  solmatrix[3]*math.sin(2*math.pi*freqrange[3]*t)
-		fit5 =  solmatrix[4]*math.sin(2*math.pi*freqrange[4]*t)
-		fit6 =  solmatrix[5]*math.sin(2*math.pi*freqrange[5]*t)
-		fit7 =  solmatrix[6]*math.sin(2*math.pi*freqrange[6]*t)
-		fit8 =  solmatrix[7]*math.sin(2*math.pi*freqrange[7]*t)
-		fit9 =  solmatrix[8]*math.sin(2*math.pi*freqrange[8]*t)
-		fit10 = solmatrix[9]*math.sin(2*math.pi*freqrange[9]*t)
-		fit11 = solmatrix[10]*math.cos(2*math.pi*freqrange[0]*t)
-		fit12 = solmatrix[11]*math.cos(2*math.pi*freqrange[1]*t)
-		fit13 = solmatrix[12]*math.cos(2*math.pi*freqrange[2]*t)
-		fit14 = solmatrix[13]*math.cos(2*math.pi*freqrange[3]*t)
-		fit15 = solmatrix[14]*math.cos(2*math.pi*freqrange[4]*t)
-		fit16 = solmatrix[15]*math.cos(2*math.pi*freqrange[5]*t)
-		fit17 = solmatrix[16]*math.cos(2*math.pi*freqrange[6]*t)
-		fit18 = solmatrix[17]*math.cos(2*math.pi*freqrange[7]*t)
-		fit19 = solmatrix[18]*math.cos(2*math.pi*freqrange[8]*t)
-		fit20 = solmatrix[19]*math.cos(2*math.pi*freqrange[9]*t)
-		fit21 = solmatrix[20]*1.
+		#fit1 =  solmatrix[0]*math.sin(2*math.pi*freqrange[0]*t)
+		#fit2 =  solmatrix[1]*math.sin(2*math.pi*freqrange[1]*t)
+		#fit3 =  solmatrix[2]*math.sin(2*math.pi*freqrange[2]*t)
+		#fit4 =  solmatrix[3]*math.sin(2*math.pi*freqrange[3]*t)
+		#fit5 =  solmatrix[4]*math.sin(2*math.pi*freqrange[4]*t)
+		#fit6 =  solmatrix[5]*math.sin(2*math.pi*freqrange[5]*t)
+		#fit7 =  solmatrix[6]*math.sin(2*math.pi*freqrange[6]*t)
+		#fit8 =  solmatrix[7]*math.sin(2*math.pi*freqrange[7]*t)
+		#fit9 =  solmatrix[8]*math.sin(2*math.pi*freqrange[8]*t)
+		#fit10 = solmatrix[9]*math.sin(2*math.pi*freqrange[9]*t)
+		#fit11 = solmatrix[10]*math.cos(2*math.pi*freqrange[0]*t)
+		#fit12 = solmatrix[11]*math.cos(2*math.pi*freqrange[1]*t)
+		#fit13 = solmatrix[12]*math.cos(2*math.pi*freqrange[2]*t)
+		#fit14 = solmatrix[13]*math.cos(2*math.pi*freqrange[3]*t)
+		#fit15 = solmatrix[14]*math.cos(2*math.pi*freqrange[4]*t)
+		#fit16 = solmatrix[15]*math.cos(2*math.pi*freqrange[5]*t)
+		#fit17 = solmatrix[16]*math.cos(2*math.pi*freqrange[6]*t)
+		#fit18 = solmatrix[17]*math.cos(2*math.pi*freqrange[7]*t)
+		#fit19 = solmatrix[18]*math.cos(2*math.pi*freqrange[8]*t)
+		#fit20 = solmatrix[19]*math.cos(2*math.pi*freqrange[9]*t)
+		#fit21 = solmatrix[20]*1.
+
+		fitsinvector = [solmatrix[i]*math.sin(2*math.pi*freqrange[i]*t) for i in range(len(freqrange)/2)]
+		fitcosvector = [solmatrix[i+10]*math.cos(2*math.pi*freqrange[i]*t) for i in range(len(freqrange)/2)]
+		
+		fitvector = fitsinvector
+		fitvector.extend(fitcosvector)
+		fitvector.append(solmatrix[20]*1)
 	
-		fit50.extend(data50[x]-(fit1+fit2+fit3+fit4+fit5+fit6+fit7+fit8+fit9+fit10+fit11+fit12+fit13+fit14+fit15+fit16+fit17+fit18+fit19+fit20+fit21))
+		fit50.extend(data50[x]-sum(fitvector))
 
 	timefull.extend(time50)
 	datafull.extend(data50)
@@ -140,7 +155,7 @@ for val in xrange(len(timesplit)):
 #
 	plt.close()
 
-	del time50, fit50, fvector, data50, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8, fit9, fit10, fit11, fit12, fit13, fit14, fit15, fit16, fit17, fit18, fit19, fit20
+	#del time50, fit50, fvector, data50, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8, fit9, fit10, fit11, fit12, fit13, fit14, fit15, fit16, fit17, fit18, fit19, fit20
 
 fig2 = plt.figure()
 
