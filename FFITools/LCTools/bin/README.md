@@ -1,0 +1,127 @@
+# TESS Simulated Image Generator
+
+The TESS Simulated Image Generator (TSIG), is a python module that generates
+star field data algorithmically, for testing information processing systems. 
+The output from TSIG is designed to match the format data stream from the
+TESS satellite hardware.
+
+## Pre-Requisites
+
+    astropy >= 1.3
+    numpy >= 1.12
+    scipy >= 0.14.0
+    matplotlib (optional; for plotting results)
+    astroquery (optional; for UCAC4 queries)
+    psycopg2 (optional; for TIC queries)
+
+## Installation
+
+To install using the latest from the repository:
+
+    pip install -e git+git@tessgit.mit.edu:tess/tsig.git#egg=tess-tsig
+
+## Examples
+
+These are examples of how to use TSIG.  Specify the `--help` option to see an
+explanation of the options available for any command.
+
+### Generate images using TIC catalog
+
+To generate a set of images using the default settings, simply run the `tsig`
+command.  The default settings are 10 exposures at 2 minute cadence using a
+satellite pointing of ra=30.0, dec=45.0, roll=0.0 (in degrees) and no
+spacecraft motion.
+
+    tsig
+
+This should result in a directory full of FITS files.  There will be one image
+for each of the 4 CCDs for each camera (16 images for each stack of exposures).
+
+To change the satellite pointing, number of exposures, or other parameters,
+create a configuration file, `tsig.cfg`, with contents like this:
+
+    num_exposure = 60
+    cadence = 30 # minutes
+    satellite_pointing = 30.0, 45.0, 0.0 # ra, dec, roll in degrees
+
+Then generate the images:
+
+    tsig --config-file tsig.cfg
+
+The sample configuration file lists most of the options:
+
+    example.cfg
+
+### Display components of TSIG
+
+Display the lightcurve types:
+
+    tsig-sampler lightcurve
+
+Display output from catalog queries:
+
+    tsig-sampler testgrid
+    tsig-sampler testpattern
+    tsig-sampler tic
+
+Display stages of transformations between reference frames:
+
+    tsig-sampler cam
+    tsig-sampler transform
+
+Display a point spread function (PSF) interpolation:
+
+    tsig-sampler psf
+
+### Display results of TIC queries
+
+Query the TIC and display the results:
+
+    tsig-tic plot-near-loc
+    tsig-tic query-near-loc --ra=RA --dec=DEC --radius=RADIUS
+    tsig-tic query-by-loc --ra=RA --dec=DEC
+    tsig-tic query-by-id --id 8675309
+    tsig-tic query-by-id --id 1,2,3
+    tsig-tic query-by-id --id=5 --fields=id,objtype,tmag,imag
+
+### Display results of PSF database queries
+
+Query the PSF database and display the result:
+
+    tsig-psf --x=FIELD_ANGLE_X --y=FIELD_ANGLE_Y
+
+### Apply a single effect to an image
+
+Run a single effect:
+
+    tsig-effect
+
+### Tests
+
+Run the unit test suite:
+
+    make test
+
+## Support
+
+Please submit bug reports and feature requests
+
+    https://tessgit.mit.edu/tess/tsig/issues
+
+A mailing list is available at mailman.mit.edu
+
+    tess-tsig
+
+## Development
+
+The code for TSIG is at
+
+    https://tessgit.mit.edu/tess/tsig.git
+
+## Copyright and License
+
+TSIG is Copyright(c) 2017, Massachusetts Institute of Technology (MIT)
+
+TSIG is distributed under the terms of GPLv3
+
+TSIG is the successor to SPyFFI, which was implemented by Zach Berta-Thompson.

@@ -1,0 +1,145 @@
+#!/usr/bin/env python 
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT) 
+# 
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU General Public License as published by 
+# the Free Software Foundation, either version 3 of the License, or 
+# (at your option) any later version. 
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details. 
+# 
+# You should have received a copy of the GNU General Public License 
+# along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+
+#This is a tool for running BLS from vartools
+
+
+import os
+import scipy as sp
+import numpy as np
+from scipy import signal
+import shutil
+import time
+import tempfile
+import commands
+import ConfigParser
+import logging
+import sys
+import optparse
+
+import tsig
+from tsig.lightcurve import ASCIILightCurve as Lc
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import lctools
+from lctools.bls import VtBls 
+from lctools.util.configurable import Configuration
+
+def cmd_parse():
+    p = optparse.OptionParser()
+
+    p.add_option('--version', action="store_true", help="dislay the version ")
+    p.add_option('--config', '-c', dest="config_file", type=str, metavar="CONFIG_FILE", help='the filename of configuration file that contains '
+                      'contains parameter settings(Optional)')
+
+
+    p.add_option('--nprocs', '-n', default=3, help='the number of processors to use when run the code with multiprocessing, default is 3, when set to 1, turn off multiprocessing')
+    
+    p.add_option('--overwrite', '-r', default=False, action='store_true',
+                 help='the flag to allow replacing existing files')
+    
+    p.add_option('--logfile', default='example.log', 
+                 help='The destination of the log file (this is disabled when using multiple cores since multiprocessing does not take file handeler, output to stdout for now), - outputs the logs to stdout')
+    p.add_option('--debug', action='store_true', help='output debug level message')
+    options, arguments = p.parse_args()
+    return options
+
+
+def get_default_keys():
+    bls_dict = dict({'inlist':'', 'coljd':1, 'colmag':2, 'indir':''})
+    return bls_dict
+        
+def blsmulti(args):
+    blsengin = args[0]
+    lcfile = args[1]
+    replace = args[2]
+    blsengin(lcfile, replace=replace)
+    return
+
+
+
+if __name__ == '__main__':
+
+    options = cmd_parse()
+
+    if int(options.nprocs)==1:
+        multi = False
+    else:
+        multi = True
+        import multiprocessing
+        from multiprocessing import Pool
+       
+
+    if options.version:
+        print "lctool version %s" % LCTools.__version__
+        sys.exit(0)
+    lctools.setup_logging(debug=options.debug, filename=options.logfile, multi=multi)
+    logger = logging.getLogger(__name__)
+    cfg = Configuration(options.config_file)
+    replace = options.overwrite
+    nps = int(options.nprocs)
+   
+    # FIXME: Lc does not parse config_file consistently
+    lcfile = Lc(options.config_file)
+    default_bls_dict = get_default_keys()  
+    logger.debug("default_bls_dict=%s", str(default_bls_dict))
+
+    infile = cfg.get('BLS', default_bls_dict).get('infile', '') 
+
+    if infile == '':
+        logger.debug("Can not find input file from configure file, try to input from a input list from configure file")
+        inlist = cfg.get('BLS')['inlist'] 
+        
+     
+    indir = cfg.get('BLS', default_bls_dict).get('indir', '')
+    logger.debug("infile=%s, indir=%s", infile, indir)
+   
+  
+    coljd = int(cfg.get('BLS', default_bls_dict).get('coljd', 1))
+    colmag = int(cfg.get('BLS', default_bls_dict).get('colmag', 2))
+
+    # configure the blsengin
+    blsengin = VtBls(cfg)
+    
+    if not infile == '':
+        lcfile.name = indir+infile 
+        lcfile.cols['jd'] = coljd
+        lcfile.cols['ltflc'] = colmag
+        blsengin(lcfile, replace=replace)
+    else: 
+        names = []
+        
+        from LCTools.utils.dataio import readcolumn
+        readcolumn(names, 1, indir+inlist, datformat='str')
+        if multi:
+            pool = Pool(processes=nps)
+            lcfilelist = []
+            for i in xrange(len(names)):
+                lcfile = Lc(cfgfile=cfgfile)
+                lcfile.name = indir+names[i]
+                lcfile.cols['jd'] = coljd
+                lcfile.cols['ltflc'] = colmag
+                lcfilelist.append(lcfile)
+            task = [([blsengin,lcfilelist[i], replace]) for i in range(len(names))]
+            pool.map(blsmulti, task)
+        else:
+            for x in names:
+                lcfile.cols['jd'] = coljd
+                lcfile.cols['ltflc'] = colmag
+                lcfile.name = indir+x
+                blsengin(lcfile, replace=replace)

@@ -1,0 +1,21 @@
+# Created by grmatch 0.9e0 (fi: 0.9.3)
+# Invoked command: grmatch --match-points -r catalog.txt --col-ref 5,6 --col-ref-ordering -4 -i FITS/simulated_18h00m00s+66d33m39s_ccd1_000000.fistar --col-inp 2,3 --col-inp-ordering +9 --weight reference,column=4 --triangulation maxinp=1000,maxref=1000,auto,unitarity=0.05 --order 2 --max-distance 1.0 --comment --output-transformation FITS/simulated_18h00m00s+66d33m39s_ccd1_000000.trans
+# Type: polynomial of order=2 (number of coefficients: 6)
+type = polynomial
+order = 2
+# Initial transformation of (x_img,y_img):
+offset = 0, 0
+scale = 1
+# Coefficients of the x fit: 
+dxfit=     -65.95312963,     -170.6063151,   -0.03521292369,  -0.002360945996,  -0.004270609487,  -0.001583217876
+# Coefficients of the y fit: 
+dyfit=     -66.47788709,     0.0473531356,      170.6686305,   0.002502404168,  -0.004008083758,  -0.008307292381
+# Residual: 0.254579 (native)
+# Residual: 0.261161 (weighted)
+# Unitarity: 0.000410786
+# Points: 6828 38884 6978 (number of: matched, reference, input)
+# Ratio: 97.85 (percent)
+# Timing: 0.090 0.010 0.050 1 (total, triangle match, coordinate match: in seconds; iterations)
+# Triangulation: 0 (maximal triangulation level)
+# Convex hull coverage ratio: 0.999649
+# All: 0.254579 0.261161 0.000410786 6828 38884 6978 97.85 0.090 0.010 0.050 1 0

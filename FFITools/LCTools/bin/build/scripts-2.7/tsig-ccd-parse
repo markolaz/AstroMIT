@@ -1,0 +1,75 @@
+#!/usr/bin/python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+Take in a bunch of csv files and outputs a configuration file.
+
+Run with the csv files in order:
+
+    ./bin/tsig-ccd-parse ./calibration-70C/1450.csv ./calibration-70C/1513.csv ...
+
+The output configuration is printed to stdout.
+
+"""
+
+import os
+import sys
+import csv
+
+from collections import defaultdict, OrderedDict
+from configobj import ConfigObj
+
+def chunk(l, n):
+    return [l[i:i + n] for i in xrange(0, len(l), n)]
+
+def camera(filename):
+    with open(filename, 'r') as fhl:
+        data = list(csv.reader(fhl.read()))
+    p = [x[0].strip() for x in data if len(x) == 1 and x[0].strip()]
+
+    name = None
+    dot = defaultdict(list)
+
+    for t in p:
+        try:
+            dot[name].append(float(t))
+        except:
+            name = t
+
+    l1 = chunk(dot['oc noise (e-)'], 4)
+    l2 = chunk(dot['gain (e-/adu)'], 4)
+
+    return OrderedDict(('CCD%d'% (x+1), {
+        'gain': l2[x],
+        'oc_noise': l1[x]
+    }) for x in range(len(l1)))
+
+if __name__ == '__main__':
+    files = []
+    for fn in sys.argv[1:]:
+        fn = os.path.abspath(os.path.expanduser(fn))
+        if not os.path.isfile(fn):
+            sys.stderr.write("Can't find file: %s\n" % fn)
+            sys.exit(1)
+        files.append(fn)
+
+    # Create a configuration
+    ConfigObj({'SpaceCraft':
+        dict(('Camera%d' % (x + 1), camera(fn))
+            for x, fn in enumerate(files))
+        }).write(sys.stdout)
+

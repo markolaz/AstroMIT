@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Light curve model generator
+Prints out time and flux values for the selected type of light curve
+"""
+
+import os
+import sys
+import optparse
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+from tsig.lightcurve import LightCurve
+
+VERSION = '0.2'
+
+if __name__ == '__main__':
+
+    usage = """%%prog [options] [--help]
+
+Lightcurve Types:
+
+    %s""" % '\n    '.join([x.__name__ for x in LightCurve.all])
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option('--version', action='store_true',
+                      help='display the program version')
+    parser.add_option("-c", "--config", dest="config_file",
+                      metavar="CONFIG_FILE",
+                      help="configuration file")
+    parser.add_option('--num-points', type=int, default=1300,
+                      help='desired number of flux points')
+    parser.add_option('--cadence', type=int, default=30,
+                      help='cadence in minutes')
+    parser.add_option('--output', default='flux',
+                      help='what to output: flux or magnitude')
+    parser.add_option('--type', dest="lc_type", default='random',
+                      help='specify a lightcurve type')
+    parser.add_option('--infile',
+                      help='input file path for custom light curve model')
+    (options, args) = parser.parse_args()
+
+    if options.version:
+        print VERSION
+        exit(0)
+
+    lightcurves = dict()
+    for lightcurve in LightCurve.all:
+        lightcurves[lightcurve.__name__.lower()] = lightcurve
+
+    lc_name = None
+    for key in lightcurves:
+        if key.startswith(options.lc_type.lower()):
+            lc_name = key
+    if lc_name is None:
+        print "unrecognized type: %s" % options.lc_type
+        exit(1)        
+    try:
+        lc = lightcurves.get(lc_name)(name=options.infile,
+                                      cfgfile=options.config_file)
+        lc.load_from_file()
+    except TypeError:
+        lc = lightcurves.get(lc_name)()
+
+    t = 0
+    for x in range(0, options.num_points):
+        if options.output == 'flux':
+            print t, lc.get_flux(t)
+        else:
+            print t, lc.get_mag(t)
+        t += options.cadence

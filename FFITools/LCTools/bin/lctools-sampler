@@ -1,0 +1,203 @@
+#!/usr/bin/env python 
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT) 
+# 
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU General Public License as published by 
+# the Free Software Foundation, either version 3 of the License, or 
+# (at your option) any later version. 
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details. 
+# 
+# You should have received a copy of the GNU General Public License 
+# along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+
+# This is a tool to detrend light curves
+
+
+import ConfigParser
+import optparse
+import logging
+import sys
+import os
+
+import tsig
+from tsig.lightcurve import FilebasedLightCurve as LightCurve
+from tsig.lightcurve import ASCIILightCurve as Lc
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import lctools 
+from lctools.bls import VtBls 
+from lctools.dft import VtDft 
+from lctools.report import Summary
+from lctools.detrend import DetrendFunc, COSDetrend, EPDDetrend, FocusDetrend, PolyDetrend
+from lctools.util.configurable import Configuration
+
+def cmd_parse():
+    p = optparse.OptionParser()
+    p.add_option('--version', action="store_true", help="dislay the version ")
+    p.add_option('--logfile', default='example.log', 
+                 help='The destination of the log file, - outputs the logs to stdout')
+    p.add_option('--overwrite', '-r', default=False, action='store_true',
+                 help='the flag to allow replacing existing files')
+    p.add_option('--config', '-c', dest="config_file", type=str, metavar="CONFIG_FILE", help='the filename of configuration file that contains '
+                      'contains parameter settings(Optional)')
+    p.add_option('--debug', action='store_true', help='output debug level message')
+    p.add_option('--plot-to-file', action='store_true', help='output figures to a png file')
+    options, arguments = p.parse_args()
+    
+    return [options, arguments]
+
+def get_default_keys():
+    detrend_dict = dict({'inlist':'', 'coljd':1, 'colmag':2, 'indir':''})
+    return detrend_dict
+ 
+
+
+
+if __name__ == '__main__':
+    usage = """%prog action [options]
+    Actions: 
+        detrend - detrend light curve of one star.
+        BLS - run bls on the light curve of one star.
+        DFT - run dft on the light curve of one star.
+        candsum - run candidate selection summary on one star.
+    """
+
+    options, args = cmd_parse()
+     
+    multi = False
+      
+
+
+    if options.version:
+        print "lctool version %s" % LCTools.__version__
+        sys.exit(0)
+    lctools.setup_logging(debug=options.debug, filename=options.logfile, multi=multi)
+    logger = logging.getLogger(__name__)
+    replace = options.overwrite
+    cfg = Configuration(options.config_file)
+    
+    if 'detrend' in args:
+        default_detrend_dict = get_default_keys()  
+        logger.debug("default_detrend_dict=%s", str(default_detrend_dict))
+        infile = cfg.get('LC', default_detrend_dict).get('infile', '') 
+              
+        indir = cfg.get('LC', default_detrend_dict).get('indir', '')
+        logger.debug("infile=%s, indir=%s", infile, indir)
+         
+        outdir = cfg.get('LC', default_detrend_dict).get('outdir', indir)
+        outext = cfg.get('LC', default_detrend_dict).get('outext', '_ltf.lc')
+        
+        logger.info('Indir set to be %s, outdir set to be %s, infile set to be %s, outext set to be %s' , indir, outdir, infile, outext)    
+        useridentifier = cfg.get('LC', default_detrend_dict).get('identifier', '')
+        if not useridentifier=='':
+            useridentifier = useridentifier.strip('\"')
+        #create detrend method
+        method = cfg.get('LC', default_detrend_dict).get('method', 'cos')
+        detrend_func = DetrendFunc.create(cfg, method=method)
+        if not infile == '':
+            lc = LightCurve().create_lightcurve(indir+infile,cfgfile=options.config_file, useridentifier=useridentifier) 
+
+   
+            lc.load_from_file(label='all')
+            detrend_func.detrend(lc)
+            outfile = outdir+os.path.basename(os.path.splitext(infile)[0])+outext
+            lc.write_to_file(outfile, replace=replace, outheader="# jd rlc ltflc x y")
+        import matplotlib
+        from matplotlib import pyplot as plt
+        fig = plt.figure()
+        ax1 = fig.add_subplot(211)
+        ax1.plot(lc.data['jd'], lc.data['rlc'], '.', label="Raw Flux")
+        plt.gca().invert_yaxis()
+        ax2 = fig.add_subplot(212)
+        ax2.plot(lc.data['jd'], lc.data['ltflc'], 'k.', label="Detrended Flux")
+        ax1.set_ylabel("Relative Magnitude")
+        ax2.set_ylabel("Relative Magnitude")
+        ax2.set_xlabel("JD")
+        plt.gca().invert_yaxis()
+        if options.plot_to_file:
+            plt.savefig("detrend.png")
+        else:
+            plt.show()
+    elif 'BLS' in args:
+        infile = cfg.get('BLS').get('infile', '') 
+
+         
+        indir = cfg.get('BLS').get('indir', '')
+        logger.debug("infile=%s, indir=%s", infile, indir)
+   
+  
+        coljd = int(cfg.get('BLS').get('coljd', 1))
+        colmag = int(cfg.get('BLS').get('colmag', 2))
+
+        # configure the blsengin
+        blsengin = VtBls(cfg)
+        
+        lcfile = Lc(options.config_file)
+        lcfile.name = indir+infile 
+        lcfile.cols['jd'] = coljd
+        lcfile.cols['ltflc'] = colmag
+        blsengin(lcfile, replace=replace)
+        import matplotlib
+        from matplotlib import pyplot as plt
+        blsfile = lcfile.name+'.bls'
+        blsanalfile = blsengin.get_blsanalfile(lcfile.name)
+        import numpy as np
+        blsspec = np.loadtxt(blsfile)
+        period = blsspec[:,0]
+        snr = blsspec[:,1]
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.plot(period, snr, 'k.')
+        
+        from lctools.util.dataio import readtableline
+        blsanalinfo = readtableline(blsanalfile)
+        ax1.vlines(blsanalinfo['Period'], 0, np.max(snr), color='r', linewidth=2)
+        ax1.set_ylabel("BLS significance")
+        ax1.set_xlabel("Period")
+        if options.plot_to_file:
+            plt.savefig("bls.png")
+        else:
+            plt.show()
+
+
+    elif 'DFT' in args:
+        infile = cfg.get('DFT').get('infile', '') 
+        indir = cfg.get('DFT').get('indir', '')
+        logger.debug("infile=%s, indir=%s", infile, indir)
+   
+        # parse jd, mag information for the lc 
+        coljd = int(cfg.get('DFT').get('coljd', 1))
+        colmag = int(cfg.get('DFT').get('colmag', 2))
+
+        # configure the blsengin
+        dftengin = VtDft(cfg)
+        lcfile = Lc(options.config_file)
+        # start doing dft
+        lcfile.name = indir + infile
+        lcfile.cols['jd'] = coljd
+        lcfile.cols['ltflc'] = colmag
+        dftengin(lcfile, replace=replace)
+    elif 'candsum' in args:
+        infile = cfg.get('LC').get('infile', '')
+        
+        indir = cfg.get('LC').get('indir', '') 
+
+        outdir = cfg.get('LC').get('outdir', indir)
+        blsanalf = cfg.get('BLS').get('analfile', '.blsanal') 
+
+        outext = cfg.get('LC').get('outext', '_ltf.lc')
+
+        ltffile = os.path.splitext(infile)[0]+outext
+        lc = Lc().create_lightcurve(indir+ltffile,cfgfile=options.config_file) 
+        lc.load_from_file()
+        blsanal = outdir + '_'.join(os.path.splitext(os.path.basename(lc.name))[0].split('_')[:]) + blsanalf
+        report_eng = Summary(lc, blsanal)
+        report_eng.gen_summary(plottofile=options.plot_to_file)
+    else:
+        "nothing specified."
+

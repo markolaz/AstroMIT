@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns1:missionPointingProfile dataSetId="40018" missionPointingProfileId="6" xmlns:ns1="http://tess.mit.edu/mission-pointing-profile">
+  <sector dec="-46.0280296711" ra="147.418172456" roll="-214.75909812" sectorNumber="1" startTjd="1178.35547211">
+    <orbit orbitNumber="1"/>
+    <orbit orbitNumber="2"/>
+  </sector>
+  <sector dec="-56.4357517677" ra="168.326541653" roll="-221.501314657" sectorNumber="2" startTjd="1207.26683437">
+    <orbit orbitNumber="3"/>
+    <orbit orbitNumber="4"/>
+  </sector>
+  <sector dec="-67.262794115" ra="193.997428291" roll="-221.037303812" sectorNumber="3" startTjd="1235.93972282">
+    <orbit orbitNumber="5"/>
+    <orbit orbitNumber="6"/>
+  </sector>
+  <sector dec="-75.8622929762" ra="236.162976139" roll="-202.133301997" sectorNumber="4" startTjd="1263.753025">
+    <orbit orbitNumber="7"/>
+    <orbit orbitNumber="8"/>
+  </sector>
+  <sector dec="-76.1740915293" ra="300.49654126" roll="-159.913502794" sectorNumber="5" startTjd="1290.6122567">
+    <orbit orbitNumber="9"/>
+    <orbit orbitNumber="10"/>
+  </sector>
+  <sector dec="-68.3993234617" ra="342.49272995" roll="-139.806736715" sectorNumber="6" startTjd="1316.72911189">
+    <orbit orbitNumber="11"/>
+    <orbit orbitNumber="12"/>
+  </sector>
+  <sector dec="-58.5688688148" ra="7.24207677067" roll="-137.831018146" sectorNumber="7" startTjd="1342.56077209">
+    <orbit orbitNumber="13"/>
+    <orbit orbitNumber="14"/>
+  </sector>
+  <sector dec="-48.7292969267" ra="27.0781690758" roll="-142.947273367" sectorNumber="8" startTjd="1368.86371472">
+    <orbit orbitNumber="15"/>
+    <orbit orbitNumber="16"/>
+  </sector>
+  <sector dec="-39.9638981413" ra="46.1129312644" roll="-152.021046094" sectorNumber="9" startTjd="1396.26939652">
+    <orbit orbitNumber="17"/>
+    <orbit orbitNumber="18"/>
+  </sector>
+  <sector dec="-33.5934773863" ra="65.4542919386" roll="-163.671156994" sectorNumber="10" startTjd="1424.71504143">
+    <orbit orbitNumber="19"/>
+    <orbit orbitNumber="20"/>
+  </sector>
+  <sector dec="-30.6867235776" ra="85.0701044323" roll="-176.663989401" sectorNumber="11" startTjd="1453.46274427">
+    <orbit orbitNumber="21"/>
+    <orbit orbitNumber="22"/>
+  </sector>
+  <sector dec="-31.6203357471" ra="104.445617248" roll="-189.716154334" sectorNumber="12" startTjd="1481.7614862">
+    <orbit orbitNumber="23"/>
+    <orbit orbitNumber="24"/>
+  </sector>
+  <sector dec="-35.9901254757" ra="123.015584497" roll="-201.632855714" sectorNumber="13" startTjd="1509.17582407">
+    <orbit orbitNumber="25"/>
+    <orbit orbitNumber="26"/>
+  </sector>
+  <sector dec="53.4110694683" ra="197.763289309" roll="-40.1190952352" sectorNumber="14" startTjd="1535.63465888">
+    <orbit orbitNumber="27"/>
+    <orbit orbitNumber="28"/>
+  </sector>
+  <sector dec="44.2982200451" ra="216.229686935" roll="-33.0792537585" sectorNumber="15" startTjd="1561.55736468">
+    <orbit orbitNumber="29"/>
+    <orbit orbitNumber="30"/>
+  </sector>
+  <sector dec="37.022980481" ra="233.894764429" roll="-23.4965889973" sectorNumber="16" startTjd="1587.7050063">
+    <orbit orbitNumber="31"/>
+    <orbit orbitNumber="32"/>
+  </sector>
+  <sector dec="32.2202986432" ra="251.896910043" roll="-12.1347021849" sectorNumber="17" startTjd="1614.68501178">
+    <orbit orbitNumber="33"/>
+    <orbit orbitNumber="34"/>
+  </sector>
+  <sector dec="30.5642953964" ra="270.410389307" roll="-359.719852352" sectorNumber="18" startTjd="1642.71656699">
+    <orbit orbitNumber="35"/>
+    <orbit orbitNumber="36"/>
+  </sector>
+  <sector dec="32.4011193047" ra="289.072001164" roll="-347.224382943" sectorNumber="19" startTjd="1671.49108298">
+    <orbit orbitNumber="37"/>
+    <orbit orbitNumber="38"/>
+  </sector>
+</ns1:missionPointingProfile>

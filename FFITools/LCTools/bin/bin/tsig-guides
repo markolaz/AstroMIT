@@ -1,0 +1,249 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+Transform star positions to CCD locations to check guide stars.
+
+each pixel is 0.015 mm
+offset from boresight is 30.72 mm?
+"""
+
+import configobj
+import os
+import optparse
+import sys
+
+try:
+    import Tkinter
+    mpl_backend = 'TkAgg'
+except ImportError:
+    mpl_backend = 'Agg'
+
+import matplotlib
+matplotlib.use(mpl_backend)
+from matplotlib import pyplot as plt
+from matplotlib import collections
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import tsig
+from tsig.spacecraft.spacecraft import Spacecraft
+from tsig.spacecraft.transformer import Transformer
+
+
+def read_guides(filename):
+    """read guide star data from file.  expecting this format:
+
+    # Camera n
+    # Sector n
+    # row col brightness_min brightness_max row_err col_err flag ra dec ticid
+
+    skip lines that do not start with a digit
+    """
+    cam_id = None
+    sector = None
+    row = []
+    col = []
+    ra = []
+    dec = []
+    with open(filename) as f:
+        for line in f:
+            if line.startswith('# Camera '):
+                cam_id = int(line[9])
+                continue
+            elif line.startswith('# Sector '):
+                sector = int(line[9])
+                continue
+            elif not line[0].isdigit():
+                continue
+            parts = line.split()
+            row.append(float(parts[0]))
+            col.append(float(parts[1]))
+            ra.append(float(parts[7]))
+            dec.append(float(parts[8]))
+    return cam_id, sector, row, col, ra, dec
+
+def read_pointing(sector_number, filename):
+    """read a pointing file and obtain ra, dec, roll from indicated sector"""
+    cfg = configobj.ConfigObj(filename)
+    sector_name = "sector%s" % sector_number
+    if sector_name in cfg:
+        return float(cfg[sector_name]['ra']), \
+            float(cfg[sector_name]['dec']), float(cfg[sector_name]['roll'])
+    raise Exception("no sector %s in %s" % (sector_name, filename))
+
+def focal_to_absolute_pixel(x, y):
+    """transform from focal plane in mm to absolute fractional pixels"""
+    mm_per_pixel = 0.015
+    pixel_x = x / mm_per_pixel + 2048.0 + 88
+    pixel_y = y / mm_per_pixel + 2048.0 + 30
+    return pixel_x, pixel_y
+
+def ccd_pixel_to_absolute_pixel(x, y, ccd):
+    """transform from per-ccd coordinates to absolute fractional pixels"""
+    # FIXME: these transformations do not make sense (rotated 180 degrees)
+    if ccd == 1: # lower left, but should be upper right
+        pixel_x = 44 + x
+        pixel_y = y
+    elif ccd == 2: # lower right, but should be upper left
+        pixel_x = 2048 + 44 + x
+        pixel_y = y
+    elif ccd == 3: # upper right, but should be lower left
+        pixel_x = 2 * 2048 + 3 * 44 - x
+        pixel_y = 2 * (2048 + 30) - y
+    elif ccd == 4: # upper left, but should be lower right
+        pixel_x = 2048 + 44 - x
+        pixel_y = 2 * (2048 + 30) - y
+    return pixel_x, pixel_y
+
+def do_plot(cam_id, sector_id, guide_x, guide_y, tsig_x, tsig_y):
+    # create the figure that holds each plot
+    cam_min_x = 0
+    cam_max_x = 4272
+    cam_min_y = 0
+    cam_max_y = 4156
+#    cam_min_x = 2100
+#    cam_max_x = 2500
+#    cam_min_y = 0
+#    cam_max_y = 800
+    ccd_width = 2048
+    ccd_height = 2058
+    ccd_buf_x = 44
+    ccd_buf_y = 20
+
+    figure = plt.figure('guide star comparison', figsize=(16, 16))
+    ax = figure.add_subplot(111)
+    ax.set_title("camera %s : sector %s" % (cam_id, sector_id))
+    ax.scatter(guide_x, guide_y, s=5, marker='o', alpha=0.3, label='guide')
+    ax.scatter(tsig_x, tsig_y, s=40, marker='s', alpha=0.3, label='tsig')
+    # lower left
+    ax.add_collection(collections.LineCollection(
+        [[(ccd_buf_x + ccd_width, 0), (ccd_buf_x + ccd_width, ccd_height)], # rt
+         [(ccd_buf_x + ccd_width, ccd_height), (ccd_buf_x, ccd_height)], # top
+         [(ccd_buf_x, ccd_height), (ccd_buf_x, 0)]], # left
+        alpha=0.2))
+    # upper left
+    ax.add_collection(collections.LineCollection(
+        [[(ccd_buf_x + ccd_width, cam_max_y),
+          (ccd_buf_x + ccd_width, cam_max_y - ccd_height)],
+         [(ccd_buf_x + ccd_width, cam_max_y - ccd_height),
+          (ccd_buf_x, cam_max_y - ccd_height)],
+         [(ccd_buf_x, cam_max_y - ccd_height),
+          (ccd_buf_x, cam_max_y)]],
+        alpha=0.2))
+    # upper right
+    ax.add_collection(collections.LineCollection(
+        [[(cam_max_x - (ccd_buf_x + ccd_width), cam_max_y),
+          (cam_max_x - (ccd_buf_x + ccd_width), cam_max_y - ccd_height)],
+         [(cam_max_x - (ccd_buf_x + ccd_width), cam_max_y - ccd_height),
+          (cam_max_x - ccd_buf_x, cam_max_y - ccd_height)],
+         [(cam_max_x - ccd_buf_x, cam_max_y - ccd_height),
+          (cam_max_x - ccd_buf_x, cam_max_y)]],
+        alpha=0.2))
+    # lower right
+    ax.add_collection(collections.LineCollection(
+        [[(cam_max_x - (ccd_buf_x + ccd_width), 0),
+          (cam_max_x - (ccd_buf_x + ccd_width), ccd_height)],
+         [(cam_max_x - (ccd_buf_x + ccd_width), ccd_height),
+          (cam_max_x - ccd_buf_x, ccd_height)],
+         [(cam_max_x - ccd_buf_x, ccd_height),
+          (cam_max_x - ccd_buf_x, 0)]],
+        alpha=0.2))
+#    ax.set_aspect(1)
+    ax.set_xlim(cam_min_x, cam_max_x)
+    ax.set_ylim(cam_min_y, cam_max_y)
+    plt.legend(loc='upper right')
+    plt.show()
+
+
+if __name__ == "__main__":
+    usage = """%prog --guide-file filename --pointing-file filename"""
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("-d", "--debug", action="store_true",
+                      help="emit extra diagnostic information to log")
+    parser.add_option("--method", default="focal",
+                      help="conversion method: focal or pixel")
+    parser.add_option("--table", action="store_true", default=True,
+                      help="print the results as a table")
+    parser.add_option("--plot", action="store_true", default=True,
+                      help="plot the results")
+    parser.add_option("--guide-file", dest="gfile",
+                      default="examples/guides-cam1.txt",
+                      help="name of file that has guide star data")
+    parser.add_option("--pointing-file", dest="pfile",
+                      default="examples/pointing.cfg",
+                      help="name of file that has pointing data")
+    (options, args) = parser.parse_args()
+
+    sc = Spacecraft()
+    xf = Transformer()
+
+    cam_id, sector_id, row, col, ra, dec = read_guides(options.gfile)
+
+    if cam_id is None:
+        cam_id = 1
+
+    if sector_id is not None:
+        ra_sc, dec_sc, roll_sc = read_pointing(sector_id, options.pfile)
+    else:
+        # spacecraft pointing for sector 2
+        ra_sc = 168.326541653
+        dec_sc = -56.4357517677
+        roll_sc = -221.501314657
+
+    pixel_x = []
+    pixel_y = []
+
+    # there are two ways to transform from ra,dec to pixels.  the first
+    # approach uses the celestial_to_focal conversion, with a local
+    # conversion from focal plane to fractional pixels.  the second approach
+    # uses celestial_to_pixel, plus a local conversion from origin at
+    # center of camera to lower left corner (lower left of ccd 3).
+    
+    if options.method == 'focal':
+        x, y, fax, fay = xf.celestial_to_focal(
+            ra, dec, ra_sc, dec_sc, roll_sc,
+            sc.get_cam_geometry(cam_id))
+        for i in range(len(row)):
+            p_x, p_y = focal_to_absolute_pixel(x[i], y[i])
+            pixel_x.append(p_x)
+            pixel_y.append(p_y)
+
+    elif options.method == 'pixel':
+        x, y, ccd, fax, fay = xf.celestial_to_pixel(
+            ra, dec, ra_sc, dec_sc, roll_sc,
+            sc.get_cam_geometry(cam_id),
+            sc.get_ccd_geometries(cam_id))
+        for i in range(len(row)):
+            p_x, p_y = ccd_pixel_to_absolute_pixel(x[i], y[i], ccd[i])
+            pixel_x.append(p_x)
+            pixel_y.append(p_y)
+
+    if options.table:
+        print "# delta_x col pixel_x delta_y row pixel_y"
+        for i in range(len(row)):
+            delta_x = pixel_x[i] - col[i]
+            delta_y = pixel_y[i] - row[i]
+            ccd = [[2,1],[3,4]][col[i] > 2048][row[i] > 2048]
+            print ' '.join('%.6f' % j for j in
+                           [ccd, delta_x, col[i], pixel_x[i],
+                            delta_y, row[i], pixel_y[i]])
+
+    if options.plot:
+        do_plot(cam_id, sector_id, col, row, pixel_x, pixel_y)

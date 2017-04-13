@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+include AUTHORS
+include MANIFEST.in
+include setup.py
+include requirements.txt
+include docs/*
+include tests/*.py
+include tests/data/*
+include examples/example.cfg
+include tsig/lightcurve/*.txt

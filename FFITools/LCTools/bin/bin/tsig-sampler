@@ -1,0 +1,510 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import logging
+import optparse
+import os
+import sys
+import time
+
+try:
+    import Tkinter
+    mpl_backend = 'TkAgg'
+except ImportError:
+    mpl_backend = 'Agg'
+
+import matplotlib
+matplotlib.use(mpl_backend)
+from matplotlib import pyplot as plt
+from matplotlib import gridspec
+from matplotlib import collections
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+import numpy.random
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import tsig
+from tsig.lightcurve import *
+from tsig.catalog import TestGrid, TestPattern, TIC
+from tsig.spacecraft.spacecraft import Spacecraft
+from tsig.spacecraft.transformer import Transformer
+from tsig.psf import PSF
+
+
+def do_lightcurve(options):
+    """display one of each type of lightcurve"""
+    objs = [ConstantLightCurve(),
+            TrapezoidLightCurve(),
+            SinusoidLightCurve(),
+            McQuillanLightCurve(),
+            KeplerTCELightCurve(),
+            RandomLightCurve()]
+    figure = plt.figure('lightcurve sampler', figsize=(10, 2 * len(objs)))
+    for i, c in enumerate(objs):
+        ax = figure.add_subplot(len(objs), 1, i + 1)
+        f = c.make_plot(ax=ax)
+    plt.subplots_adjust(top=0.96, bottom=0.06,
+                        hspace=0.8, left=0.125, right=0.98)
+    plt.show()
+
+
+def do_testgrid(options):
+    """display the test grid"""
+    nrow = 2
+    objs = [{'TestGrid': {}},
+            {'TestGrid': {'size': 2000, 'spacing': 100}},
+            {'TestGrid': {'size': 1000, 'spacing': 500}},
+            {'TestGrid': {'size': 600, 'spacing': 60}},
+            {'TestGrid': {}, 'ra': 45.0, 'dec': 10.0},
+            {'TestGrid': {}, 'ra': 0.5, 'dec': 1.5}]
+    figure = plt.figure('test pattern sampler',
+                        figsize=(15, 1.8 * len(objs)))
+    gs = gridspec.GridSpec(nrow, len(objs) / nrow)
+    for i, d in enumerate(objs):
+        ra = d.get('ra', 0.0)
+        dec = d.get('dec', 0.0)
+        c = TestGrid(d)
+        c.query(ra, dec)
+        c.add_lightcurves()
+        ax = figure.add_subplot(gs[i % nrow, i / nrow])
+        f = c.make_plot(ax=ax)
+        ax.set_title("%d: %s\n%s,%s" % (i, d['TestGrid'], ra, dec))
+    plt.subplots_adjust(top=0.92, bottom=0.1,
+                        hspace=0.15, wspace=0.2, left=0.1, right=0.98)
+    plt.show()
+
+
+def do_testpattern(options):
+    """display the test patterns"""
+    imgdir = os.path.join(DIR, '../tsig/util/data')
+    figure = plt.figure('img sampler', figsize=(10, 10))
+    gs = gridspec.GridSpec(2, 2)
+    c = TestPattern()
+    c.place_image(os.path.join(imgdir, "cat.png"), 10, 10, 0.3)
+    c.place_image(os.path.join(imgdir, "spiral.png"), 70, 35, 0.1)
+    c.place_image(os.path.join(imgdir, "spiral.png"), 80, 0, 0.6)
+    c.place_image(os.path.join(imgdir, "cat.png"), 70, 70, 0.1)
+    c.query(45, 55, 20.0)
+    c.add_lightcurves()
+    ax = figure.add_subplot(gs[0, 0])
+    f = c.make_plot(ax=ax)
+    ax.set_title("cat")
+    c.query(70, 40, 20.0)
+    c.add_lightcurves()
+    ax = figure.add_subplot(gs[0, 1])
+    f = c.make_plot(ax=ax)
+    ax.set_title("spiral")
+    c.query(75, 75, 20.0)
+    c.add_lightcurves()
+    ax = figure.add_subplot(gs[1, 0])
+    f = c.make_plot(ax=ax)
+    ax.set_title("kitty")
+    c.query(80, 38, 8.0)
+    c.add_lightcurves()
+    ax = figure.add_subplot(gs[1, 1])
+    f = c.make_plot(ax=ax)
+    ax.set_title("zoom")
+    plt.subplots_adjust(top=0.92, bottom=0.1,
+                        hspace=0.25, wspace=0.2, left=0.05, right=0.98)
+    plt.show()
+
+
+def do_tic(options):
+    """do a few plots of data from tic queries"""
+    objs = [
+        {'ra': 0.0, 'dec': 20.0, 'radius': 0.1, 'query': 'box'},
+        {'ra': 0.0, 'dec': 20.0, 'radius': 0.2, 'query': 'box'},
+        {'ra': 0.0, 'dec': 20.0, 'radius': 0.4, 'query': 'box'},
+        {'ra': 0.5, 'dec': 20.0, 'radius': 0.1, 'query': 'spacial_circle'},
+        {'ra': 0.5, 'dec': 20.0, 'radius': 0.2, 'query': 'spacial_circle'},
+        {'ra': 0.5, 'dec': 20.0, 'radius': 0.4, 'query': 'spacial_circle'},
+        {'ra': 40.0, 'dec': 40.0, 'radius': 0.1, 'query': 'spacial_box'},
+        {'ra': 40.0, 'dec': 40.0, 'radius': 0.2, 'query': 'spacial_box'},
+        {'ra': 40.0, 'dec': 40.0, 'radius': 0.3, 'query': 'spacial_box'},
+        {'ra': 40.0, 'dec': -40.0, 'radius': 0.1, 'query': 'spacial_box'},
+        {'ra': 40.0, 'dec': -40.0, 'radius': 0.2, 'query': 'spacial_box'},
+        {'ra': 40.0, 'dec': -40.0, 'radius': 0.3, 'query': 'spacial_box'}]
+    nrow = 3
+    figure = plt.figure('tic sampler', figsize=(18, len(objs)))
+    gs = gridspec.GridSpec(nrow, len(objs) / nrow)
+    for i, q in enumerate(objs):
+        c = TIC(dbinfo_loc=options.dbinfo)
+        c.query(ra=q['ra'], dec=q['dec'], radius=q['radius'], dbindex=q['query'])
+        c.add_lightcurves()
+        ax = figure.add_subplot(gs[i % nrow, i / nrow])
+        f = c.make_plot(ax=ax)
+        sky = SkyCoord("%sd" % q['ra'], "%sd" % q['dec'])
+        gal = sky.galactic
+        ax.set_title("%s: %s\nra=%.1f dec=%.1f radius=%.1f" % (
+            i, gal.to_string(precision=1), q['ra'], q['dec'], q['radius']))
+    plt.subplots_adjust(top=0.92, bottom=0.1,
+                        hspace=0.5, wspace=0.4, left=0.05, right=0.98)
+    plt.show()
+
+
+def add_focal_plot(figure, x, y, cam_id, gs, row, col):
+    # actual size is about 31x31 mm, but show more than that
+    focal_min = -34 # mm
+    focal_max = 34 # mm
+    mm_per_pixel = 0.015
+    ccd_width = 2048 * mm_per_pixel
+    ccd_height = 2058 * mm_per_pixel
+    if row is None:
+        ax = figure.add_subplot(gs[:, col: col+2])
+    else:
+        ax = figure.add_subplot(gs[row: row+2, col: col+2])
+    ax.set_title("cam%s focal" % cam_id)
+    ax.scatter(x, y, s=1, marker='o', alpha=0.3, edgecolors='black')
+    ccd_edges = [[(0, 0), (ccd_width, 0)],
+                 [(ccd_width, 0), (ccd_width, ccd_height)],
+                 [(ccd_width, ccd_height), (0, ccd_height)],
+                 [(0, -ccd_height), (0, 0)],
+                 [(0, 0), (-ccd_width, 0)],
+                 [(-ccd_width, 0), (-ccd_width, -ccd_height)],
+                 [(-ccd_width, -ccd_height), (0, -ccd_height)],
+                 [(0, -ccd_height), (0, 0)],
+                 [(0, 0), (ccd_width, 0)],
+                 [(ccd_width, 0), (ccd_width, -ccd_height)],
+                 [(ccd_width, -ccd_height), (0, -ccd_height)],
+                 [(0, -ccd_height), (0, 0)],
+                 [(0, 0), (-ccd_width, 0)],
+                 [(-ccd_width, 0), (-ccd_width, ccd_height)],
+                 [(-ccd_width, ccd_height), (0, ccd_height)],
+                 [(0, ccd_height), (0, 0)]]
+    ax.add_collection(collections.LineCollection(ccd_edges, alpha=0.2))
+    ax.set_aspect(1)
+    ax.set_xlim(focal_min, focal_max)
+    ax.set_ylim(focal_min, focal_max)
+#    ax.get_xaxis().set_visible(False)
+#    ax.get_yaxis().set_visible(False)
+
+    
+def add_ccd_plot(figure, x, y, cam_id, ccd_id, gs, row, col):
+    # science pixels are 2048x2048; visible pixels are 2048x2058
+    ccd_width = 2048
+    ccd_height = 2058
+    pad = 40
+    # flip ccd 1 and 2 for sake of display
+    if ccd_id in [1, 2]:
+        x = ccd_width - x
+        y = ccd_height - y
+    row_offset, col_offset = {
+        1: (0, 1), 2: (0, 0), 3: (1, 0), 4: (1, 1)}.get(ccd_id)
+    ax = figure.add_subplot(gs[row + row_offset, col + col_offset])
+    ax.set_title("cam%s ccd%s" % (cam_id, ccd_id))
+    # scatter origin is lower left
+    ax.scatter(x, y, s=1, marker='o', alpha=0.3, edgecolors='black')
+    # FIXME: why is the line origin different from scatter origin?
+#    ax.add_line(Line2D([0, 0], [ccd_width, 0])) # left
+#    ax.add_line(Line2D([ccd_width, 0], [ccd_width, ccd_height])) # top
+#    ax.add_line(Line2D([ccd_width, ccd_height], [0, ccd_height])) # right
+#    ax.add_line(Line2D([0, ccd_height], [0, 0])) # bottom
+    edges = [[(0, 0), (ccd_width, 0)],
+             [(ccd_width, 0), (ccd_width, ccd_height)],
+             [(ccd_width, ccd_height), (0, ccd_height)],
+             [(0, ccd_height), (0, 0)]]
+    ax.add_collection(collections.LineCollection(edges, alpha=0.2))
+    ax.set_aspect(1)
+    ax.set_xlim(-pad, ccd_width + pad)
+    ax.set_ylim(-pad, ccd_height + pad)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+
+def do_transform(options):
+    """display an image in the celestial frame and projected to each CCD"""
+    import matplotlib.image as mpimg
+    radius = options.radius or 12.0
+    ra_sc = options.ra or 12.0
+    dec_sc = options.dec or 50.0
+    roll_sc = options.roll or 0.0
+    imgdir = os.path.join(DIR, '../tsig/util/data')
+    sc = Spacecraft()
+    xf = Transformer()
+    c = TestPattern()
+    c.place_image(os.path.join(imgdir, "tp-200.png"), 0, 0, 0.25)
+    c.query(ra_sc, dec_sc, 4 * radius)
+    # create a figure to hold all of the plots
+    figure = plt.figure('transform sampler', figsize=(16, 16))
+    gs = gridspec.GridSpec(8, 7)
+    # plot the spacecraft field of view
+    ax = figure.add_subplot(gs[:, 0])
+    f = c.make_plot(ax=ax)
+    ax.set_title("spacecraft FoV")
+    for cam_id in range(1, 5):
+        cam_row = 6 - 2 * (cam_id - 1)
+        ra_cam, dec_cam, roll_cam = xf.spacecraft_to_camera_pointing(
+            ra_sc, dec_sc, roll_sc, sc.get_cam_angle(cam_id))
+        # plot the camera field of view
+        c.query(ra_cam, dec_cam, radius)
+        ax = figure.add_subplot(gs[cam_row:cam_row+2, 1:3])
+        f = c.make_plot(ax=ax)
+        ax.set_title("cam%s FoV" % cam_id)
+        plt.xlabel("")
+        # plot the focal plane
+        x, y, fax, fay = xf.celestial_to_focal(
+            c.ra, c.dec, ra_sc, dec_sc, roll_sc,
+            sc.get_cam_geometry(cam_id))
+        add_focal_plot(figure, x, y, cam_id, gs, cam_row, 3)
+        # plot each CCD separately
+        all_x, all_y, ccd_loc, fax, fay = xf.celestial_to_pixel(
+            c.ra, c.dec, ra_sc, dec_sc, roll_sc,
+            sc.get_cam_geometry(cam_id),
+            sc.get_ccd_geometries(cam_id))
+        for ccd_id in range(1, 5):
+            x = all_x[ccd_loc == ccd_id]
+            y = all_y[ccd_loc == ccd_id]
+            add_ccd_plot(figure, x, y, cam_id, ccd_id, gs, cam_row, 5)
+    plt.subplots_adjust(top=0.98, bottom=0.02,
+                        hspace=0.3, wspace=0.01, left=0.05, right=0.98)
+    plt.show()
+
+
+def do_cam(options):
+    """show all 4 CCDs for a single camera given a spacecraft pointing"""
+    cam_id = options.camera or 2 # default to camera 2 for a view of orion
+    radius = options.radius or 15.0
+    ra_sc = options.ra or 83.0
+    dec_sc = options.dec or 12.0
+    roll_sc = options.roll or 0.0
+    min_tmag = options.min_tmag or 3 # stars must be at least this bright
+    sc = Spacecraft()
+    xf = Transformer()
+    c = TIC(dbinfo_loc=options.dbinfo, min_brightness=min_tmag)
+    ra_cam, dec_cam, roll_cam = xf.spacecraft_to_camera_pointing(
+        ra_sc, dec_sc, roll_sc, sc.get_cam_angle(cam_id))
+    c.query(ra_cam, dec_cam, radius)
+    # create the figure that holds each plot
+    figure = plt.figure(c.name, figsize=(18, 8))
+    gs = gridspec.GridSpec(2, 6)
+    # camera view of sky
+    ax = figure.add_subplot(gs[:, 0:2])
+    f = c.make_plot(ax=ax)
+    ax.set_title("cam%s FoV" % cam_id)
+    # focal plane including all 4 CCDs
+    x, y, fax, fay = xf.celestial_to_focal(
+        c.ra, c.dec, ra_sc, dec_sc, roll_sc,
+        sc.get_cam_geometry(cam_id))
+    add_focal_plot(figure, x, y, cam_id, gs, None, 2)
+    # print the values if the query did not return too many items
+    if len(x) < 100:
+        print "x\ty\tra\tdec\ttmag\tteff"
+        for i in range(len(x)):
+            print "%.2f\t%.2f\t%.2f\t%.3f\t%.2f\t%.2f" % (
+                x[i], y[i], c.ra[i], c.dec[i], c.tmag[i], c.teff[i])
+    # plot each CCD separately
+    all_x, all_y, ccd_loc, fax, fay = xf.celestial_to_pixel(
+        c.ra, c.dec, ra_sc, dec_sc, roll_sc,
+        sc.get_cam_geometry(cam_id),
+        sc.get_ccd_geometries(cam_id))
+    for ccd_id in range(1, 5):
+        x = all_x[ccd_loc == ccd_id]
+        y = all_y[ccd_loc == ccd_id]
+        add_ccd_plot(figure, x, y, cam_id, ccd_id, gs, 0, 4)
+    plt.subplots_adjust(top=0.98, bottom=0.02,
+                        hspace=0.2, wspace=0.25, left=0.05, right=0.98)
+    plt.show()
+
+
+def do_cmap(options):
+    """
+    display the full range of colors in the stellar colormap
+    the sun is 5777K, jupiter is 121K, earth is 288K
+    matplotlib scales the colormap to the range of values, so this is
+    really just a test of that scaling.
+    """
+    # FIXME: substitude a colormap that corresponds to actual star colors
+    teff_lo = 0
+    teff_hi = 220000
+    center_x = 0.0
+    center_y = 0.0
+    size = 1000
+    spacing = 20
+    pad = 30
+    s = 30
+    pixels = max(int(size / spacing), 1)
+    n = pixels * pixels
+    # do a range of colors
+    t = np.linspace(teff_lo, teff_hi, n)[::-1]
+    # laid out on a two-dimensional grid
+    x_grid, y_grid = np.meshgrid(np.arange(pixels) * spacing,
+                                 np.arange(pixels) * spacing)
+    y = (y_grid - np.mean(y_grid) + center_y).flatten()
+    x = (x_grid - np.mean(x_grid) + center_x).flatten()
+    figure = plt.figure('stellar colormap', figsize=(10, 10))
+    ax = figure.add_subplot(111)
+    plt.sca(ax)
+    ax.scatter(x, y, s=s, marker='o', c=t, alpha=0.3, edgecolors='black')
+    ax.set_aspect(1)
+    ax.set_title('Teff from %s to %s' % (teff_lo, teff_hi))
+    ax.set_xlim(np.min(x) - pad, np.max(x) + pad)
+    ax.set_ylim(np.min(y) - pad, np.max(y) + pad)
+    plt.show()
+
+
+def do_image(options):
+    """illustrate origin and scaling between different display mechanisms"""
+    pixels = np.zeros(shape=(300, 400), dtype=np.int32)
+    # draw a block near the origin
+    pixels[10:50, 10:50] = 1000
+    # draw a line increasing x
+    pixels[60:200, 10:30] = 500
+    # draw a box around the edges
+    pixels[0:, 1:2] = 800
+    pixels[1:2, 0:] = 800
+    pixels[-2:-1, 0:] = 800
+    pixels[0:, -2:-1] = 800
+    head = fits.Header()
+    head['HEADER'] = (42, 'the header comment')
+    hdu = fits.PrimaryHDU(pixels, header=head)
+    hdulist = fits.HDUList([hdu])
+    hdulist.writeto('sampler-image.fits', overwrite=True)
+    gs = gridspec.GridSpec(1, 2)
+    figure = plt.figure('image test', figsize=(12, 6))
+    ax = figure.add_subplot(gs[0, 0])
+    ax.set_title("imshow")
+    ax.imshow(pixels)
+    ax.set_aspect(1)
+    scale = 1 # display pixels per pixel
+    x = []
+    y = []
+    for i in range(pixels.shape[0]):
+        for j in range(pixels.shape[1]):
+            if pixels[i, j]:
+                x.append(i * scale)
+                y.append(j * scale)
+    ax = figure.add_subplot(gs[0, 1])
+    ax.set_title("scatter")
+    ax.scatter(x, y, s=1, marker='o', alpha=0.3, edgecolors='black')
+    ax.set_aspect(1)
+    plt.show()
+
+
+def do_psf(options):
+    """Display PSF interpolation"""
+    a = PSF.create_gradient(0, 0, width=50, height=50, origin_x=0, origin_y=0)
+    b = PSF.create_gradient(0, 100, width=50, height=50, origin_x=0, origin_y=50)
+    c = PSF.create_gradient(100, 0, width=50, height=50, origin_x=50, origin_y=0)
+    d = PSF.create_gradient(100, 100, width=50, height=50, origin_x=50, origin_y=50)
+    x = PSF.interpolate(50, 50, a, b, c, d)
+    xa = PSF.interpolate(0, 0, a, b, c, d)
+    xb = PSF.interpolate(0, 100, a, b, c, d)
+    xc = PSF.interpolate(100, 0, a, b, c, d)
+    xd = PSF.interpolate(100, 100, a, b, c, d)
+    a.normalize()
+    b.normalize()
+    c.normalize()
+    d.normalize()
+    x.normalize()
+    xa.normalize()
+    xb.normalize()
+    xc.normalize()
+    xd.normalize()
+    # gridspec is col, row from upper left
+    gs = gridspec.GridSpec(5, 5)
+    figure = plt.figure('PSF interpolation', figsize=(16, 14))
+    ax = figure.add_subplot(gs[4, 0]) # lower left
+    f = a.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[0, 0]) # upper left
+    f = b.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[4, 4]) # lower right
+    f = c.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[0, 4]) # upper right
+    f = d.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[3, 1]) # center lower left
+    f = xa.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[1, 1]) # center upper left
+    f = xb.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[3, 3]) # center lower right
+    f = xc.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[1, 3]) # center upper right
+    f = xd.make_plot(ax=ax)
+    ax = figure.add_subplot(gs[2, 2]) # center
+    f = x.make_plot(ax=ax)
+    plt.show()
+    
+
+
+if __name__ == "__main__":
+    actions = [do_lightcurve,
+               do_testgrid,
+               do_testpattern,
+               do_tic,
+               do_transform,
+               do_cam,
+               do_cmap,
+               do_image,
+               do_psf]
+
+    usage = """%prog action [options]
+
+Actions:
+    lightcurve  - display assortment of lightcurves
+    testgrid    - display test grid
+    testpattern - display test pattern
+    tic         - display assortment of TIC queries
+    transform   - display assortment of transformed images
+    cam         - display camera, focal plane, and CCD views of the sky
+    cmap        - display stellar colormap
+    image       - display imgage origins in different contexts
+    psf         - display PSF interpolation"""
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("--version", action="store_true",
+                      help="display the version")
+    parser.add_option("-l", "--log", dest="log_file", metavar="LOG_FILE",
+                      help="log file")
+    parser.add_option("-d", "--debug", action="store_true",
+                      help="emit extra diagnostic information to log")
+    parser.add_option("-s", "--seed", type=int,
+                      help="seed for random number generator")
+    parser.add_option("--dbinfo", metavar="FILENAME",
+                      help="file with database credentials")
+    parser.add_option("--ra", type=float,
+                      help="right ascention for spacecraft pointing [degree]")
+    parser.add_option("--dec", type=float,
+                      help="declination for spacecraft pointing [degree]")
+    parser.add_option("--roll", type=float,
+                      help="roll for spacecraft pointing [degree]")
+    parser.add_option("--radius", type=float,
+                      help="radius of camera field of view [degree]")
+    parser.add_option("--camera", type=int,
+                      help="camera identifier [1,2,3,4]")
+    parser.add_option("--min-tmag", type=float,
+                      help="minimum magnitude")
+    (options, args) = parser.parse_args()
+
+    if options.version:
+        print "tsig version %s" % tsig.__version__
+        sys.exit(0)
+
+    tsig.setup_logging(debug=options.debug, filename=options.log_file)
+    logger = logging.getLogger(__name__)
+
+    if options.seed is not None:
+        logger.info("using random seed %s" % options.seed)
+        numpy.random.seed(options.seed)
+
+    for a in actions:
+        name = a.__name__.replace('do_', '')
+        if name in args:
+            a(options)
+            break
+    else:
+        print "nothing specified"

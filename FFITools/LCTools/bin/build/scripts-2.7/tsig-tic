@@ -1,0 +1,138 @@
+#!/usr/bin/python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import logging
+import optparse
+import os
+import sys
+import time
+
+try:
+    import Tkinter
+    mpl_backend = 'TkAgg'
+except ImportError:
+    mpl_backend = 'Agg'
+
+import matplotlib
+matplotlib.use(mpl_backend)
+from matplotlib import pyplot as plt
+from matplotlib import gridspec
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import tsig
+from tsig.lightcurve import *
+from tsig.catalog import TestPattern, TIC
+
+
+if __name__ == "__main__":
+    usage = """%prog action [options]
+
+Actions:
+    query-near-loc - find objects within RADIUS degrees of RA and DEC
+    query-by-loc   - find objects with specified RA and DEC
+    query-by-id    - find objects with specified identifier(s)
+    plot-near-loc  - plot objects within RADIUS degrees of RA and DEC
+    profile        - run a suite of queries to assess database performance"""
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("--version", action="store_true",
+                      help="display the version")
+    parser.add_option("-l", "--log", dest="log_file", metavar="LOG_FILE",
+                      help="log file")
+    parser.add_option("-d", "--debug", action="store_true",
+                      help="emit extra diagnostic information to log")
+    parser.add_option("--dbinfo", dest="dbinfo", metavar="FILENAME",
+                      help="file or url with database credentials")
+    parser.add_option("--ra", type=float, metavar="RA", default=30.0,
+                      help="right ascension, in degrees")
+    parser.add_option("--dec", type=float, metavar="DEC", default=40.0,
+                      help="declination, in degrees")
+    parser.add_option("--radius", type=float, metavar="RADIUS", default=0.2,
+                      help="radius, in degrees")
+    parser.add_option("--id", dest="tic_id", metavar="TIC_ID", default="0",
+                      help="TIC identifier for a stellar object")
+    parser.add_option("--fields", default='*',
+                      help="desired subset of all database columns")
+    (options, args) = parser.parse_args()
+
+    if options.version:
+        print "tsig version %s" % tsig.__version__
+        sys.exit(0)
+
+    tsig.setup_logging(debug=options.debug, filename=options.log_file)
+    logger = logging.getLogger(__name__)
+
+    if 'plot-near-loc' in args:
+        # plot the results of a single TIC query
+        c = TIC(options.dbinfo)
+        c.query(ra=options.ra, dec=options.dec, radius=options.radius)
+        c.add_lightcurves()
+        print "found %d objects for ra=%s dec=%s radius=%s" % (
+            len(c.tmag), options.ra, options.dec, options.radius)
+        figure = plt.figure('results of tic query', figsize=(10, 10))
+        ax = figure.add_subplot(111)
+        f = c.make_plot(ax=ax)
+        ax.set_title("%s objects\nra=%.1f dec=%.1f radius=%.1f" % (
+            len(c.tmag), options.ra, options.dec, options.radius))
+        plt.show()
+
+    elif 'query-near-loc' in args:
+        c = TIC(options.dbinfo)
+        c.query(ra=options.ra, dec=options.dec, radius=options.radius)
+        print "found %d objects for ra=%s dec=%s radius=%s" % (
+            len(c.tmag), options.ra, options.dec, options.radius)
+        print "# ra, dec, pmra, pmdec, tmag, teff"
+        for idx in range(len(c.tmag)):
+            print ','.join("%s" % x for x in [c.ra[idx], c.dec[idx], c.pmra[idx], c.pmdec[idx], c.tmag[idx], c.teff[idx]])
+
+    elif 'query-by-loc' in args:
+        c = TIC(options.dbinfo)
+        results = c.query_by_loc(
+            ra=options.ra, dec=options.dec, field_list=options.fields)
+        print "found %d objects for ra=%s dec=%s" % (
+            len(results), options.ra, options.dec)
+        print "#", ','.join(c.column_names)
+        for row in results:
+            print ','.join(["%s" % f for f in row])
+
+    elif 'query-by-id' in args:
+        c = TIC(options.dbinfo)
+        results = c.query_by_id(options.tic_id.split(','), options.fields)
+        print "found %d objects" % len(results)
+        print "#", ','.join(c.column_names)
+        for row in results:
+            print ','.join(["%s" % f for f in row])
+
+    elif 'profile' in args:
+        # run a set of queries to determine performance characteristics
+        summary = ['query elapsed objects ra dec radius']
+        for idx in ['box', 'spacial_box', 'spacial_circle']:
+            c = TIC(dbinfo_loc=options.dbinfo, cache_queries=False)
+            for radius in [0.2, 0.5, 1.0, 3.0, 6.0, 10.0]:
+                start = time.time()
+                c.query(ra=options.ra, dec=options.dec, radius=radius,
+                        dbindex=idx)
+                elapsed = time.time() - start
+                summary.append("%s %.3f %d %.1f %.1f %.1f" %
+                               (idx, elapsed, len(c.tmag),
+                                options.ra, options.dec, radius))
+        print '\n'.join(summary)
+
+    else:
+        print "nothing requested"

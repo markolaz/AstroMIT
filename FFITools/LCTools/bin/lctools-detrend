@@ -1,0 +1,158 @@
+#!/usr/bin/env python 
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT) 
+# 
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU General Public License as published by 
+# the Free Software Foundation, either version 3 of the License, or 
+# (at your option) any later version. 
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details. 
+# 
+# You should have received a copy of the GNU General Public License 
+# along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+
+# This is a tool to detrend light curves
+
+
+import ConfigParser
+import optparse
+import logging
+import sys
+import os
+
+import tsig
+from tsig.lightcurve import FilebasedLightCurve as LightCurve
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import lctools 
+from lctools.detrend import DetrendFunc, COSDetrend, EPDDetrend, FocusDetrend, PolyDetrend
+from lctools.util.configurable import Configuration
+
+def cmd_parse():
+    p = optparse.OptionParser()
+    p.add_option('--version', action="store_true", help="dislay the version ")
+    p.add_option('--logfile', default='example.log', 
+                 help='The destination of the log file, - outputs the logs to stdout')
+    p.add_option('--overwrite', '-r', default=False, action='store_true',
+                 help='the flag to allow replacing existing files')
+    p.add_option('--nprocs', '-n', default=3, help='the number of processors to use when run the code with multiprocessing, default is 3, when set to 1, turn off multiprocessing')
+    p.add_option('--config', '-c', dest="config_file", type=str, metavar="CONFIG_FILE", help='the filename of configuration file that contains '
+                      'contains parameter settings(Optional)')
+    p.add_option('--debug', action='store_true', help='output debug level message')
+    options, arguments = p.parse_args()
+    
+    return options
+
+def get_default_keys():
+    detrend_dict = dict({'inlist':'', 'coljd':1, 'colmag':2, 'indir':''})
+    return detrend_dict
+ 
+
+def detrendmulti(args):
+    #print args
+    infile = args[0]
+    outfile = args[1]
+    cfgfile = args[2]
+    replace = args[3]
+    detrend_func = args[4]
+    useridentifier = args[5]
+    lc = LightCurve().create_lightcurve(infile,cfgfile=cfgfile, useridentifier=useridentifier)
+
+    logger.info("Detrending %s...", lc.name)
+    lc.load_from_file(label='all')
+    detrend_func.detrend(lc)
+    logger.info("output to %s...", outfile)
+    lc.write_to_file(outfile, replace=replace, outheader="# jd rlc ltflc x y") 
+    return
+
+
+
+if __name__ == '__main__':
+    options = cmd_parse()
+
+    if int(options.nprocs) == 1:
+        multi = False
+    else:
+        multi = True
+        import multiprocessing
+        from multiprocessing import Pool
+       
+
+
+    if options.version:
+        print "lctool version %s" % LCTools.__version__
+        sys.exit(0)
+    lctools.setup_logging(debug=options.debug, filename=options.logfile, multi=multi)
+    logger = logging.getLogger(__name__)
+    replace = options.overwrite
+    nps = int(options.nprocs)
+    cfg = Configuration(options.config_file)
+    default_detrend_dict = get_default_keys()  
+    logger.debug("default_detrend_dict=%s", str(default_detrend_dict))
+
+    infile = cfg.get('LC', default_detrend_dict).get('infile', '') 
+
+    if infile == '':
+        logger.debug("Can not find input file from configure file, try to input from a input list from configure file")
+        inlist = cfg.get('LC')['inlist'] 
+          
+    indir = cfg.get('LC', default_detrend_dict).get('indir', '')
+    logger.debug("infile=%s, indir=%s", infile, indir)
+     
+    outdir = cfg.get('LC', default_detrend_dict).get('outdir', indir)
+    outext = cfg.get('LC', default_detrend_dict).get('outext', '_ltf.lc')
+    
+    logger.info('Indir set to be %s, outdir set to be %s, infile set to be %s, outext set to be %s' , indir, outdir, infile, outext)    
+    useridentifier = cfg.get('LC', default_detrend_dict).get('identifier', '')
+    if not useridentifier=='':
+        useridentifier = useridentifier.strip('\"')
+    #create detrend method
+    method = cfg.get('LC', default_detrend_dict).get('method', 'cos')
+    detrend_func = DetrendFunc.create(cfg, method=method)
+    if not infile == '':
+        lc = LightCurve().create_lightcurve(indir+infile,cfgfile=options.config_file, useridentifier=useridentifier) 
+
+   
+        lc.load_from_file(label='all')
+        detrend_func.detrend(lc)
+        outfile = outdir+os.path.basename(os.path.splitext(infile)[0])+outext
+        lc.write_to_file(outfile, replace=replace, outheader="# jd rlc ltflc x y")
+    else:
+        names = []
+        
+        from LCTools.utils.dataio import readcolumn
+        readcolumn(names, 1, indir+inlist, datformat='str')
+
+        if multi:
+            pool = Pool(processes=nps)
+            infilelist = []
+            outfilelist = []
+            for name in names:
+                infile = indir+name 
+                
+                outfile = outdir+os.path.basename(os.path.splitext(name)[0]) + outext
+                #print infile, outfile
+                infilelist.append(infile)
+                outfilelist.append(outfile)
+            TASK=[([infilelist[i], outfilelist[i], cfgfile, replace, detrend_func, useridentifier]) for i in range(len(infilelist))]
+            pool.map(detrendmulti, TASK)
+        else:
+            for name in names:
+                name = line.rstrip()
+                lc = LightCurve().create_lightcurve(indir+name,cfgfile=cfgfile, useridentifier=useridentifier) 
+
+                logger.info("Detrending %s...", lc.name)
+                if not jdflag:
+                    lc.gen_jd()
+   
+                lc.load_from_file(label='all')
+                detrend_func.detrend(lc)
+                outfile = outdir+os.path.basename(os.path.splitext(name)[0]) + outext
+                logger.info("output to %s...", outfile)
+                lc.write_to_file(outfile, replace=replace, outheader="# jd rlc ltflc x y")
+
+

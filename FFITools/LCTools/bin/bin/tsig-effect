@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+"""
+Apply a TSIG effect to a fits file. Outputs a fits file as a result.
+"""
+
+import os
+import sys
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+from tsig.effects.base import Effect
+from argparse import ArgumentParser, ArgumentTypeError, RawTextHelpFormatter
+
+def filename(name):
+    """Make sure we have a filename and return the absolute filename"""
+    filename = os.path.expanduser(name)
+    filename = os.path.abspath(filename)
+    if not os.path.isfile(filename):
+        raise ArgumentTypeError("File not found: %s" % name)
+    return filename
+
+if __name__ == '__main__':
+    effects = {}
+
+    # Hidden arg for creating a wiki matrix
+    if 'wiki' in sys.argv:
+        print """  <table>
+    <tr>
+      <th>Effect</th>
+      <th width="35"></th>
+      <th>Parameters</th>
+      <th>Description</th>
+    <tr>"""
+        for effect in Effect.all:
+            if not effect.__doc__:
+                continue
+            args = ""
+            for (aname, default, _, adoc) in effect.args:
+                args += ("<li><strong>%s</strong> (default: "
+                    "%s) <em>%s</em></li>") % (aname, str(default), adoc)
+            d = {
+                'name': effect.name.lower(),
+                'title': effect.title,
+                'desc': effect.__doc__.strip().replace('\n','<br/>'),
+                'args': str(args).replace('\n','<br/>'),
+                'priority': {
+                    1: ':one:',
+                    2: ':two:',
+                    }.get(effect.priority, ':question:'),
+            }
+            print """    <tr>
+      <td><a href="effect/%(name)s">%(title)s</a></td>
+      <td>%(priority)s</td>
+      <td><ul>%(args)s</ul></td>
+      <td>%(desc)s</td>
+    </tr>""" % d
+        print "  </table>"
+        sys.exit(1)
+
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument("-i", "--images", help="Output images from soruce and dest fits file", action="store_true")
+    parser.add_argument("-d", "--diff", help="Product an image diff using ImageMagik", action="store_true")
+    subparsers = parser.add_subparsers(dest='effect')
+    parser.add_argument("fits", help="The fits file to use as the source file.", type=filename, metavar='fits-file')
+
+    for effect in Effect.all:
+        effects[effect.name.lower()] = effect
+        if not effect.__doc__:
+            continue
+        sub_parser = subparsers.add_parser(effect.name, help=effect.__doc__)
+        for (arg, default, type_fn, doc) in effect.args:
+            arg = "--" + arg.replace('_', '-')
+            sub_parser.add_argument(arg, type=type_fn, default=default, help=doc)
+
+    args = parser.parse_args()
+
+    # Generate the options for this effect
+    kw = dict((key, value)
+        for key, value in args.__dict__.items()
+            if key not in ['effect', 'fits', 'images', 'diff'])
+
+    effect = effects[args.effect.lower()](**kw)
+    effect.feed_in(args.fits)
+    effect.apply_now()
+    new_fits = effect.feed_out(to_file=True, run='cmd')
+
+    if args.images or args.images:
+        os.system('fits2bitmap "%s"' % args.fits)
+        os.system('fits2bitmap "%s"' % new_fits)
+        if args.diff:
+            a = args.fits[:-5] + '.png'
+            b = new_fits[:-5] + '.png'
+            c = new_fits[:-5] + '_cmp.png'
+            os.system('compare -compose src "%s" "%s" "%s"' % (a, b, c))
+
+            if not args.images:
+                # Remove the two images if not needed.
+                os.unlink(a)
+                os.unlink(b)
+

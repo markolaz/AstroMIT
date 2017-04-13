@@ -1,0 +1,7 @@
+include README 
+include LICENSE 
+include AUTHORS 
+include docs/* 
+include tests/*.py 
+include setup.py 
+include MANIFEST.in

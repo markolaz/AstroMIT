@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+Load, validate and use nasa xml configuration data.
+"""
+
+import os
+import sys
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+from tsig.util.parsexml import ParseXML, Validator
+
+pointing = Validator({ 
+  'root' : [{'name': 'missionPointingProfile', 'type': 'profile'}],
+  'complexTypes' : {
+    'profile': [ 
+      {'name': '_dataSetId', 'type' : 'integer'},
+      {'name': '_missionPointingProfileId', 'type' : 'integer'},
+      {'name': 'sector',  'type' : 'sector',  'minOccurs' : 1, 'maxOccurs': 'unbounded'},
+    ],
+    'sector': [
+      {'name': '_dec', 'type' : 'double'},
+      {'name': '_ra', 'type' : 'double'},
+      {'name': '_roll', 'type' : 'double'},
+      {'name': '_sectorNumber', 'type' : 'integer'},
+      {'name': '_startTjd', 'type' : 'double'},
+      {'name': 'orbit',  'type' : 'orbit',  'minOccurs' : 2, 'maxOccurs': 2},
+    ],
+    'orbit': [
+      {'name': '_orbitNumber', 'type' : 'integer'},
+    ]
+  },
+})
+geometry = Validator({
+  'root' : [{'name': 'geometryModel', 'type': 'model'}],
+  'simpleTypes' : {
+    'exponent': { 'pattern' : r'[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?', },
+  },
+  'complexTypes' : {
+    'model': [ 
+      {'name': '_dataSetId', 'type' : 'integer'},
+      {'name': '_geometryModelId', 'type' : 'integer'},
+      {'name': '_startTjd', 'type' : 'double'},
+      {'name': 'ccdGeometry', 'type' : 'ccd', 'maxOccurs': 'unbounded'},
+    ],
+    'ccd': [
+      {'name': '_cameraNumber', 'type' : 'integer'},
+      {'name': '_ccdNumber', 'type' : 'integer'},
+      {'name': '_xAngleDegrees', 'type' : 'double'},
+      {'name': '_yAngleDegrees', 'type' : 'double'},
+      {'name': '_zAngleDegrees', 'type' : 'double'},
+      {'name': 'plateScalePoly', 'type' : 'plate'},
+      {'name': 'inversePlateScalePoly', 'type' : 'plate'},
+    ],
+    'plate': [
+      {'name': '_maxDomain', 'type' : 'double'},
+      {'name': '_offsetx', 'type' : 'double'},
+      {'name': '_originx', 'type' : 'double'},
+      {'name': '_scalex', 'type' : 'exponent'},
+      {'name': '_xindex', 'type' : 'double'},
+      {'name': '_order', 'type' : 'integer'},
+      {'name': '_type', 'type' : 'string'},
+      {'name': 'coeffs', 'type' : 'coeff'},
+      {'name': 'covariances', 'type' : 'covariance'},
+    ],
+    'coeff': [{'name': 'coeff', 'type': 'valueAttr', 'maxOccurs': 'unbounded'}],
+    'covariance': [{'name': 'covariance', 'type': 'valueAttr', 'maxOccurs': 'unbounded'}],
+    'valueAttr': [{'name': '_value', 'type': 'double'}],
+  }
+})
+
+from argparse import ArgumentParser, ArgumentTypeError, RawTextHelpFormatter
+
+
+def print_data(data, level=1):
+    for d in data:
+        if isinstance(data[d], dict) or isinstance(data[d], list):
+            print "%s%s%s%s" % ('  ' * (level-1), '[' * level, d, ']' * level)
+            if isinstance(data[d], dict):
+                print_data(data[d], level + 1)
+            else:
+                for x in data[d]:
+                    print_data(x, level + 1)
+        else:
+            print "%s%s = %s" % ('  ' * (level-1), d, data[d])
+
+
+if __name__ == "__main__":
+    usage = """%prog [--pointing | --geometry] filename"""
+    parser = ArgumentParser(usage)
+    parser.add_argument("xml_file", metavar="XML_FILE", help="Input XML file")
+    parser.add_argument("-p", "--pointing", action="store_true",
+                        help="XML is a spacecraft pointing file")
+    parser.add_argument("-g", "--geometry", action="store_true",
+                        help="XML is a coefficient geomery model")
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.xml_file):
+        sys.stderr.write("File not found: %s\n" % args.xml_file)
+        sys.exit(2)
+
+    data = ParseXML(args.xml_file).data
+
+    if args.pointing:
+        errors = pointing.validate(data)
+        if errors:
+            sys.stderr.write("Pointing file is not valid: %s\n" % str(errors))
+            sys.exit(3)
+    elif args.geometry:
+        errors = geometry.validate(data)
+        if errors:
+            sys.stderr.write("Geometry file is not valid: %s\n" % str(errors))
+            sys.exit(4)
+    else:
+        # Auto detect by validating each in turn
+        point = pointing.validate(data)
+        geomt = geometry.validate(data)
+        if not point:
+            print_data(data)
+        elif not geomt:
+            print_data(data)
+        else:
+            sys.stderr.write("Unrecognized file, please specify the file type.\n")
+            sys.exit(5)

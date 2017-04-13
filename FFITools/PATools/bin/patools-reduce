@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+# 
+# Copyright (C) 2017 - Massachusetts Institute of Technology (MIT) 
+# 
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU General Public License as published by 
+# the Free Software Foundation, either version 3 of the License, or 
+# (at your option) any later version. 
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details. 
+# 
+# You should have received a copy of the GNU General Public License 
+# along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+
+
+
+import optparse
+import ConfigParser
+import logging
+import os
+import sys
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+import patools 
+from patools.frame import Frame
+# from patools.field import Field
+from patools.util.configurable import Configuration
+
+
+def cmd_parse():
+    p = optparse.OptionParser()
+    p.add_option('--version', action="store_true", help="dislay the version ")
+    p.add_option('--logfile', default='example.log', 
+                 help='The destination of the log file, - outputs the logs to stdout')
+    p.add_option('--overwrite', '-r', default=False, action='store_true',
+                 help='the flag to allow replacing existing files')
+    p.add_option('--nprocs', '-n', default=3, help='the number of processors to use when run the code with multiprocessing, default is 3, when set to 1, turn off multiprocessing')
+    p.add_option('--config', '-c', dest="config_file", type=str, metavar="CONFIG_FILE", help='the filename of configuration file that contains '
+                      'contains parameter settings(Optional)')
+    p.add_option('--debug', action='store_true', help='output debug level message')
+    options, arguments = p.parse_args()
+    
+    return [options, arguments]
+
+def get_default_keys():
+
+    return dict()
+
+if __name__ == '__main__':
+    usage = """%prog action [options]
+    Actions: 
+        frame - reduce photometry for one or a list of frames without field information.
+        field - reduce photometry from a TESS field.
+
+    """
+
+    options, args = cmd_parse()
+
+    if int(options.nprocs) == 1:
+        multi = False
+    else:
+        multi = True
+        import multiprocessing
+        from multiprocessing import Pool
+       
+    if options.version:
+        print "patool version %s" % LCTools.__version__
+        sys.exit(0)
+    patools.setup_logging(debug=options.debug, filename=options.logfile, multi=multi)
+    logger = logging.getLogger(__name__)
+    nps = int(options.nprocs)
+    cfg = Configuration(options.config_file)
+    default_params_dict = get_default_keys()  
+
+    infile = cfg.get('Setup', default_params_dict).get('infile', '') 
+
+    if infile == '':
+        logger.debug("Can not find input file from configure file, try to input from a input list from configure file")
+        inlist = cfg.get('Setup')['inlist'] 
+          
+    indir = cfg.get('Setup', default_params_dict).get('indir', '')
+    logger.debug("infile=%s, indir=%s", infile, indir)
+     
+    outdir = cfg.get('Setup', default_params_dict).get('outdir', indir)
+
+    if 'frame' in args: 
+        frame = Frame(cfg)
+        if not infile == '':
+            if infile.endswith('.fits'):
+                infile = os.path.splitext(infile)[0]
+            frame.base = infile
+            frame.get_filenames()
+            frame.extract()
+        else:
+            names = []
+            
+            from patools.util.dataio import readcolumn
+            readcolumn(names, 1, indir+inlist, datformat='str')
+
+            for name in names:
+                if name.endswith('.fits'):
+                    name = os.path.splitext(name)[0]
+                frame.base = name
+                frame.get_filenames()
+                frame.extract()
+    elif 'field' in args:
+        field = Field(cfgfile)
+        logger.info("#####Field Center coordinates are:")
+        logger.info("RA=%f, DEC=%f, width of individual ccd=%f", field.ra0, field.dec0, field.width)
+        logger.info("There are %d cameras and %d ccds in the reduction", field.ncamera, testfield.nccds)
+        for i in xrange(field.ncameras):
+            for j in xrange(field.nccds):
+            
+                logger.info("camera%d, ccd%d: ra=%f, dec=%f", i+1, j+1, field.camera[i].ccdra[j], field.camera[i].ccddec[j])
+        field.init_frames()
+        field.extract()
+
+    else:
+        print "nothing specified"
+

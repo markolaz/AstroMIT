@@ -1,0 +1,53 @@
+2017.03.25 15:53:07 LCTOOLS version 0.3.3
+2017.03.25 15:53:07 reading configuration from ../example.cfg
+2017.03.25 15:53:45 LCTOOLS version 0.3.3
+2017.03.25 15:53:45 reading configuration from example.cfg
+2017.03.25 15:55:47 LCTOOLS version 0.3.3
+2017.03.25 15:55:47 reading configuration from example.cfg
+2017.03.25 15:55:52 LCTOOLS version 0.3.3
+2017.03.25 15:55:52 reading configuration from ../example.cfg
+2017.03.25 15:57:05 LCTOOLS version 0.3.3
+2017.03.25 15:57:05 reading configuration from ../example.cfg
+2017.03.25 15:57:33 LCTOOLS version 0.3.3
+2017.03.25 15:57:33 reading configuration from ../example.cfg
+2017.03.25 15:58:28 LCTOOLS version 0.3.3
+2017.03.25 15:58:28 reading configuration from ../example.cfg
+2017.03.25 16:01:47 LCTOOLS version 0.3.3
+2017.03.25 16:01:47 reading configuration from ../example.cfg
+2017.03.25 16:02:44 LCTOOLS version 0.3.3
+2017.03.25 16:02:44 reading configuration from ../example.cfg
+2017.03.25 16:02:44 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.25 16:03:22 LCTOOLS version 0.3.3
+2017.03.25 16:03:22 reading configuration from ../example.cfg
+2017.03.25 16:03:22 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.25 16:05:15 LCTOOLS version 0.3.3
+2017.03.25 16:05:15 reading configuration from ../example.cfg
+2017.03.25 16:05:15 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.25 16:06:03 LCTOOLS version 0.3.3
+2017.03.25 16:06:03 reading configuration from ../example.cfg
+2017.03.25 16:06:03 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.25 16:06:03 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.25 16:07:48 LCTOOLS version 0.3.3
+2017.03.25 16:07:48 reading configuration from ../example.cfg
+2017.03.25 16:07:48 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.25 16:07:48 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.27 18:57:55 LCTOOLS version 0.3.3
+2017.03.27 18:57:55 reading configuration from ../example.cfg
+2017.03.27 18:57:55 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.27 18:57:55 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.27 19:06:36 LCTOOLS version 0.3.3
+2017.03.27 19:06:36 reading configuration from ../example.cfg
+2017.03.27 19:06:36 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.27 19:06:36 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.27 19:11:24 LCTOOLS version 0.3.3
+2017.03.27 19:11:24 reading configuration from ../example.cfg
+2017.03.27 19:11:24 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.27 19:11:24 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.27 19:12:29 LCTOOLS version 0.3.3
+2017.03.27 19:12:29 reading configuration from ../example.cfg
+2017.03.27 19:12:29 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.27 19:12:29 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
+2017.03.27 19:17:46 LCTOOLS version 0.3.3
+2017.03.27 19:17:46 reading configuration from ../example.cfg
+2017.03.27 19:17:46 Use default LC format, type is {'y': 4, 'bg': 12, 'cadence': 2, 'bgerr': 12, 'jd': 2, 'x': 3, 'ltflc': 12, 'rlc': 8}
+2017.03.27 19:17:46 excuting command line vartools -i Kepler-6b.lc -header -readformat 1 1 2 3 -BLS q 0.008000 0.080000 0.500000 16.000000 100000 200 0 3 1 // 1 // 0 fittrap nobinnedrms ophcurve // -0.1 1.1 0.001
