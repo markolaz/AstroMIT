@@ -16,7 +16,7 @@ def FFT(datafile, time=[], flux=[], oversampling=8, nbins=None, sample_rate=None
 
 		infile.close()
 
-	if not sample_rate:
+	if not sample_rate: # Sample rate has units of time (sec), not frequency (Hz)
 		sample_rates = [a - b for a, b in zip(time, time[1:])] 
 		mode = Counter(sample_rates)
 		sample_rate = abs(mode.most_common(1)[0][0]) # Gets the mode, or most common, sample rate and uses that for the FFT
